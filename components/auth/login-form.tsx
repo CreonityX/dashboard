@@ -1,0 +1,311 @@
+"use client"
+
+import React, { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Button, Link, toast } from "@heroui/react"
+import { Handset, Check } from "@gravity-ui/icons"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faGoogle, faMeta, faApple } from "@fortawesome/free-brands-svg-icons"
+import { ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { Icon } from "@iconify/react"
+
+function OTPInput({ length = 6 }: { length?: number }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      {Array.from({ length }).map((_, i) => (
+        <input
+          key={i}
+          type="text"
+          maxLength={1}
+          className="w-11 h-12 sm:w-12 sm:h-14 text-center text-[20px] font-bold bg-transparent border border-[#e4e4e7] dark:border-[#2a2a2a] focus:border-[#0a0a0a] dark:focus:border-white rounded-xl outline-none transition-colors text-[#0a0a0a] dark:text-white"
+        />
+      ))}
+    </div>
+  )
+}
+
+export function LoginForm() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [authMode, setAuthMode] = useState<"login" | "forgot_email" | "forgot_otp" | "forgot_success_options" | "forgot_new_password">("login")
+
+  const [showPassword, setShowPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showReenterPassword, setShowReenterPassword] = useState(false)
+
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+    
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get("email")
+    const password = formData.get("password")
+
+    setTimeout(() => {
+      setIsLoading(false)
+      if (email === "test@creonity.com" && password === "Test1234") {
+        toast.success("Login Successful", {
+          description: `Welcome back, ${email}!`
+        })
+        router.push("/")
+      } else {
+        setError("Invalid email or password.")
+      }
+    }, 1000)
+  }
+
+  return (
+    <div className="w-full h-full flex flex-col justify-center p-8 sm:p-12 rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0a0a0a] animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-md mx-auto">
+        <div className="flex flex-col items-center text-center mb-8">
+        {authMode === "login" && (
+          <h1 className="text-3xl font-bold tracking-tight text-[#0a0a0a] dark:text-white">Welcome back</h1>
+        )}
+        {authMode === "forgot_email" && (
+          <>
+            <h1 className="text-3xl font-bold tracking-tight text-[#0a0a0a] dark:text-white">Reset password</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-[14px] mt-2">Enter your email or phone number to receive a secure OTP.</p>
+          </>
+        )}
+        {authMode === "forgot_otp" && (
+          <>
+            <h1 className="text-3xl font-bold tracking-tight text-[#0a0a0a] dark:text-white">Verify it's you</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-[14px] mt-2">Enter the 6-digit code sent to your contact method.</p>
+          </>
+        )}
+        {authMode === "forgot_success_options" && (
+          <>
+            <h1 className="text-3xl font-bold tracking-tight text-[#0a0a0a] dark:text-white">Verification successful</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-[14px] mt-2">Your identity has been verified. You can now login or change your password.</p>
+          </>
+        )}
+        {authMode === "forgot_new_password" && (
+          <>
+            <h1 className="text-3xl font-bold tracking-tight text-[#0a0a0a] dark:text-white">New password</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-[14px] mt-2">Create a strong new password for your account.</p>
+          </>
+        )}
+      </div>
+
+      <form className="flex flex-col gap-5 w-full" onSubmit={(e) => {
+        e.preventDefault()
+        setIsLoading(true)
+        setTimeout(() => {
+          setIsLoading(false)
+          if (authMode === "login") onSubmit(e)
+          else if (authMode === "forgot_email") setAuthMode("forgot_otp")
+          else if (authMode === "forgot_otp") setAuthMode("forgot_success_options")
+          else if (authMode === "forgot_new_password") {
+            toast.success("Password changed successfully!")
+            setAuthMode("login")
+          }
+        }, 800)
+      }}>
+        {authMode === "login" && (
+          <>
+            <div>
+              <label htmlFor="email" className="mb-2 block text-[13.5px] font-medium text-[#334155] dark:text-gray-300">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                placeholder="you@example.com"
+                className="h-12 w-full rounded-[14px] border border-[#e2e8f0] bg-white px-4 text-[14px] text-[#0a0a0a] outline-none transition focus:border-[#0060ff] focus:ring-2 focus:ring-[#0060ff]/10 dark:border-white/10 dark:bg-[#111111] dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="mb-2 block text-[13.5px] font-medium text-[#334155] dark:text-gray-300">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  placeholder="Enter your password"
+                  className="h-12 w-full rounded-[14px] border border-[#e2e8f0] bg-white px-4 pr-11 text-[14px] text-[#0a0a0a] outline-none transition focus:border-[#0060ff] focus:ring-2 focus:ring-[#0060ff]/10 dark:border-white/10 dark:bg-[#111111] dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex w-full justify-between items-center mt-1">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  className="h-4 w-4 rounded border-gray-300 text-[#0a0a0a] focus:ring-[#0a0a0a] dark:border-gray-700 dark:bg-[#111111] dark:checked:bg-white dark:checked:border-white transition-colors cursor-pointer" 
+                />
+                <span className="text-[13px] text-[#0a0a0a] dark:text-white font-medium group-hover:underline underline-offset-4">Remember me</span>
+              </label>
+              <button type="button" onClick={() => setAuthMode("forgot_email")} className="text-[13px] text-[#0a0a0a] dark:text-white font-medium underline-offset-4 hover:underline">
+                Forgot password?
+              </button>
+            </div>
+          </>
+        )}
+
+        {authMode === "forgot_email" && (
+          <div>
+            <label htmlFor="reset-contact" className="mb-2 block text-[13.5px] font-medium text-[#334155] dark:text-gray-300">
+              Email or Phone Number
+            </label>
+            <input
+              id="reset-contact"
+              name="contact"
+              type="text"
+              required
+              placeholder="you@example.com or +1 234 567 8900"
+              className="h-12 w-full rounded-[14px] border border-[#e2e8f0] bg-white px-4 text-[14px] text-[#0a0a0a] outline-none transition focus:border-[#0060ff] focus:ring-2 focus:ring-[#0060ff]/10 dark:border-white/10 dark:bg-[#111111] dark:text-white"
+            />
+          </div>
+        )}
+
+        {authMode === "forgot_otp" && (
+          <div className="mb-2">
+            <OTPInput length={6} />
+          </div>
+        )}
+
+        {authMode === "forgot_success_options" && (
+          <div className="flex flex-col gap-3">
+            <Button 
+              type="button"
+              onPress={() => setAuthMode("login")}
+              className="w-full bg-[#0a0a0a] text-white dark:bg-white dark:text-[#0a0a0a] font-bold rounded-xl h-12 transition hover:bg-black/80 dark:hover:bg-gray-200"
+            >
+              Login
+            </Button>
+            <Button 
+              type="button"
+              onPress={() => setAuthMode("forgot_new_password")}
+              variant="bordered"
+              className="w-full font-bold border-gray-200 dark:border-gray-800 rounded-xl h-12 hover:bg-gray-50 dark:hover:bg-gray-900"
+            >
+              Change Password
+            </Button>
+          </div>
+        )}
+
+        {authMode === "forgot_new_password" && (
+          <>
+            <div>
+              <label htmlFor="new-password" className="mb-2 block text-[13.5px] font-medium text-[#334155] dark:text-gray-300">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  id="new-password"
+                  name="new-password"
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  placeholder="Enter new password"
+                  className="h-12 w-full rounded-[14px] border border-[#e2e8f0] bg-white px-4 pr-11 text-[14px] text-[#0a0a0a] outline-none transition focus:border-[#0060ff] focus:ring-2 focus:ring-[#0060ff]/10 dark:border-white/10 dark:bg-[#111111] dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="reenter-password" className="mb-2 block text-[13.5px] font-medium text-[#334155] dark:text-gray-300">
+                Re-enter Password
+              </label>
+              <div className="relative">
+                <input
+                  id="reenter-password"
+                  name="reenter-password"
+                  type={showReenterPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  placeholder="Re-enter new password"
+                  className="h-12 w-full rounded-[14px] border border-[#e2e8f0] bg-white px-4 pr-11 text-[14px] text-[#0a0a0a] outline-none transition focus:border-[#0060ff] focus:ring-2 focus:ring-[#0060ff]/10 dark:border-white/10 dark:bg-[#111111] dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowReenterPassword(!showReenterPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  {showReenterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {authMode !== "forgot_success_options" && (
+          <Button 
+            type="submit"
+            className="w-full bg-[#0a0a0a] text-white dark:bg-white dark:text-[#0a0a0a] font-bold rounded-xl h-12 mt-2 transition hover:bg-black/80 dark:hover:bg-gray-200"
+            isLoading={isLoading}
+          >
+            {authMode === "login" && "Sign In"}
+            {authMode === "forgot_email" && "Send OTP"}
+            {authMode === "forgot_otp" && "Confirm OTP"}
+            {authMode === "forgot_new_password" && "Change Password"}
+          </Button>
+        )}
+        
+        {error && <p className="text-[13px] font-medium text-rose-500 text-center mt-2">{error}</p>}
+
+        {authMode !== "login" && (
+          <button type="button" onClick={() => setAuthMode("login")} className="mt-2 mx-auto flex items-center justify-center gap-2 text-[13px] text-gray-500 hover:text-[#0a0a0a] dark:hover:text-white transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            Back to login
+          </button>
+        )}
+      </form>
+
+      {authMode === "login" && (
+        <>
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+            <span className="text-xs font-medium text-gray-400 tracking-wider">OR</span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+          </div>
+
+          <div className="flex flex-col gap-3 w-full">
+
+        <button type="button" className="flex h-12 w-full items-center justify-center rounded-xl border border-[#e2e8f0] bg-white text-[14px] font-bold text-[#0a0a0a] transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#111111] dark:text-white dark:hover:bg-white/5">
+          <Icon icon="logos:google-icon" className="w-5 h-5 mr-2" />
+          Continue with Google
+        </button>
+        <button type="button" className="flex h-12 w-full items-center justify-center rounded-xl border border-[#e2e8f0] bg-white text-[14px] font-bold text-[#0a0a0a] transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#111111] dark:text-white dark:hover:bg-white/5">
+          <Icon icon="ic:baseline-apple" className="w-[26px] h-[26px] mr-2 dark:text-white text-black -mt-1" />
+          Continue with Apple
+        </button>
+        <div className="grid grid-cols-2 gap-3 w-full">
+          <button type="button" className="flex h-12 w-full items-center justify-center rounded-xl border border-[#e2e8f0] bg-white text-[14px] font-bold text-[#0a0a0a] transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#111111] dark:text-white dark:hover:bg-white/5">
+            <Icon icon="logos:meta-icon" className="w-5 h-5 mr-2" />
+            Meta
+          </button>
+          <button type="button" className="flex h-12 w-full items-center justify-center rounded-xl border border-[#e2e8f0] bg-white text-[14px] font-bold text-[#0a0a0a] transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#111111] dark:text-white dark:hover:bg-white/5">
+            <Handset className="w-4 h-4 mr-2 text-gray-700 dark:text-gray-300" />
+            Mobile
+          </button>
+        </div>
+        </div>
+      </>
+      )}
+      </div>
+    </div>
+  )
+}
