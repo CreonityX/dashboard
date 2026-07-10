@@ -9,6 +9,7 @@ import { OverviewGrid } from "./overview-grid"
 import { PerformanceCharts } from "./performance-charts"
 import { PlatformAnalyticsDashboard } from "./platform-analytics-dashboard"
 import { CreonityCampaignAnalytics } from "./creonity-campaign-analytics"
+import { AllPlatformsAudience, PremiumPostsList } from "./all-platforms-components"
 import type { AnalyticsTimeframe, PlatformAnalyticsId } from "./platform-analytics-data"
 import { cn } from "@/lib/utils"
 
@@ -28,12 +29,57 @@ const PLATFORMS = [
   { id: "snap", label: "Snapchat", icon: faSnapchat, isDisabled: true, color: "text-[#eab308]", activeBg: "bg-[#eab308]/10 dark:bg-[#eab308]/20" },
 ]
 
+const TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "posts", label: "Posts" },
+  { id: "audience", label: "Audience & Growth" },
+  { id: "earnings", label: "Earnings" },
+]
+
 export function AnalyticsApp() {
   const [timeframe, setTimeframe] = useState("7d")
   const [activePlatform, setActivePlatform] = useState("all")
+  const [activeTab, setActiveTab] = useState("overview")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   const activePlatformData = PLATFORMS.find(p => p.id === activePlatform) || PLATFORMS[0]
+
+  const platformTabs = activePlatform === "ig" 
+    ? [
+        { id: "overview", label: "Overview" },
+        { id: "posts", label: "Posts" },
+        { id: "reels", label: "Reels" },
+        { id: "audience", label: "Audience & Growth" },
+        { id: "earnings", label: "Earnings" },
+      ]
+    : activePlatform === "yt"
+    ? [
+        { id: "overview", label: "Overview" },
+        { id: "videos", label: "Videos" },
+        { id: "shorts", label: "Shorts" },
+        { id: "audience", label: "Audience & Growth" },
+        { id: "earnings", label: "Earnings" },
+      ]
+    : activePlatform === "tt"
+    ? [
+        { id: "overview", label: "Overview" },
+        { id: "posts", label: "Posts" },
+        { id: "videos", label: "Videos" },
+        { id: "audience", label: "Audience & Growth" },
+        { id: "earnings", label: "Earnings" },
+      ]
+    : activePlatform === "all"
+    ? [
+        { id: "overview", label: "Overview" },
+        { id: "audience", label: "Audience & Growth" },
+        { id: "earnings", label: "Earnings" },
+      ]
+    : [
+        { id: "overview", label: "Overview" },
+        { id: "posts", label: "Posts" },
+        { id: "audience", label: "Audience & Growth" },
+        { id: "earnings", label: "Earnings" },
+      ]
 
   return (
     <div className="flex h-full w-full flex-col bg-white dark:bg-[#0a0a0a] overflow-y-auto">
@@ -83,6 +129,14 @@ export function AnalyticsApp() {
                     onClick={() => {
                       setActivePlatform(p.id)
                       setIsDropdownOpen(false)
+                      // Reset to overview if the active tab isn't relevant to the new platform
+                      if (p.id === "all" && ["posts", "reels", "videos", "shorts"].includes(activeTab)) {
+                        setActiveTab("overview")
+                      } else if (p.id !== "ig" && ["reels"].includes(activeTab)) {
+                        setActiveTab("overview")
+                      } else if (p.id !== "yt" && ["videos", "shorts"].includes(activeTab)) {
+                        setActiveTab("overview")
+                      }
                     }}
                     className={cn(
                       "flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-left transition-colors",
@@ -124,17 +178,65 @@ export function AnalyticsApp() {
           ))}
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="flex px-6 shrink-0 gap-6 mb-6">
+        {platformTabs.map((tab) => {
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "pb-3 text-[14px] font-semibold transition-all relative outline-none",
+                isActive 
+                  ? "text-[#0060ff] dark:text-[#3b82f6]" 
+                  : "text-[#737373] hover:text-[#0a0a0a] dark:text-[#a1a1aa] dark:hover:text-white"
+              )}
+            >
+              {tab.label}
+              {isActive && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0060ff] dark:bg-[#3b82f6] rounded-full" />
+              )}
+            </button>
+          )
+        })}
+      </div>
       
       {activePlatform === "all" ? (
         <>
-          <OverviewGrid timeframe={timeframe} />
-          <PerformanceCharts timeframe={timeframe as AnalyticsTimeframe} />
-          <div className="-mt-7 px-6 pb-12">
-            <CreonityCampaignAnalytics timeframe={timeframe as AnalyticsTimeframe} />
-          </div>
+          {activeTab === "overview" && (
+            <>
+              <OverviewGrid timeframe={timeframe} />
+              <PerformanceCharts timeframe={timeframe as AnalyticsTimeframe} tab="overview" />
+            </>
+          )}
+          {activeTab === "posts" && (
+            <div className="flex flex-col gap-6">
+              <PerformanceCharts timeframe={timeframe as AnalyticsTimeframe} tab="posts" />
+              <PremiumPostsList platform="all" timeframe={timeframe as AnalyticsTimeframe} />
+            </div>
+          )}
+          {activeTab === "audience" && (
+            <div className="flex flex-col gap-6">
+              <PerformanceCharts timeframe={timeframe as AnalyticsTimeframe} tab="audience" />
+              <div className="px-6 pb-12">
+                <AllPlatformsAudience timeframe={timeframe as AnalyticsTimeframe} />
+              </div>
+            </div>
+          )}
+          {activeTab === "earnings" && (
+            <div className="-mt-7 px-6 pb-12">
+              <CreonityCampaignAnalytics timeframe={timeframe as AnalyticsTimeframe} />
+            </div>
+          )}
         </>
       ) : (
-        <PlatformAnalyticsDashboard platform={activePlatform as PlatformAnalyticsId} timeframe={timeframe as AnalyticsTimeframe} />
+        <PlatformAnalyticsDashboard 
+          platform={activePlatform as PlatformAnalyticsId} 
+          timeframe={timeframe as AnalyticsTimeframe} 
+          activeTab={activeTab}
+        />
       )}
     </div>
   )

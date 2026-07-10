@@ -14,12 +14,20 @@ export interface PlatformMetric {
   series: ChartPoint[]
 }
 
+export interface PlatformEarnings {
+  total: number
+  breakdown: Array<{ label: string; value: number }>
+  series: ChartPoint[]
+}
+
 export interface PlatformAnalyticsData {
   platform: PlatformAnalyticsId
   platformName: string
   accent: string
   followerLabel: "Followers" | "Subscribers"
   overview: PlatformMetric[]
+  textAccent?: string
+  earnings: PlatformEarnings
   engagement: PlatformMetric[]
   insights: string[]
   actionItem: string
@@ -219,6 +227,23 @@ export function getPlatformAnalyticsData(platform: PlatformAnalyticsId, timefram
     ],
   } : undefined
 
+  const earnBase = platform === "yt" ? 18400 : platform === "ig" ? 12800 : 8600
+  const earnTotal = Math.round(earnBase * timeframeMultiplier[timeframe])
+  const earnSeries = makeSeries(earnBase, offset + 4, timeframe)
+  
+  const breakdown = platform === "yt" ? [
+    { label: "AdSense Revenue", value: Math.round(earnTotal * 0.65) },
+    { label: "Brand Sponsorships", value: Math.round(earnTotal * 0.35) }
+  ] : platform === "ig" ? [
+    { label: "Brand Sponsorships", value: Math.round(earnTotal * 0.78) },
+    { label: "Subscriptions", value: Math.round(earnTotal * 0.12) },
+    { label: "Live Badges", value: Math.round(earnTotal * 0.10) }
+  ] : [
+    { label: "Brand Sponsorships", value: Math.round(earnTotal * 0.68) },
+    { label: "Creator Rewards", value: Math.round(earnTotal * 0.26) },
+    { label: "Viewer Tips", value: Math.round(earnTotal * 0.06) }
+  ]
+
   return {
     platform,
     platformName: fixture.platformName,
@@ -229,6 +254,11 @@ export function getPlatformAnalyticsData(platform: PlatformAnalyticsId, timefram
       metric("followers", followerLabel, b.followers, platform === "yt" ? 6.8 : 9.2, offset + 1, timeframe, "", false),
       metric("impressions", "Impressions", b.impressions, platform === "yt" ? 21.4 : 14.8, offset + 2, timeframe),
     ],
+    earnings: {
+      total: earnTotal,
+      breakdown,
+      series: earnSeries
+    },
     engagement: [
       metric("engagement", "Engagement Rate", b.engagement, 1.2, offset, timeframe, "%", false),
       metric("likes", "Likes", b.likes, 17.4, offset + 1, timeframe),

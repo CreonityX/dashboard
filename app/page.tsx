@@ -10,7 +10,7 @@ export default function Page() {
       
       {/* Mobile Shell */}
       <div className="lg:hidden h-full w-full">
-        <MobileShell hideTopBar>
+        <MobileShell>
           <HomeApp />
         </MobileShell>
       </div>

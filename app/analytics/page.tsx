@@ -10,7 +10,7 @@ export default function AnalyticsPage() {
       
       {/* Mobile Shell provides the mobile top bar (Search, Bell, Messages) + Bottom Nav */}
       <div className="lg:hidden h-full w-full">
-        <MobileShell hideTopBar>
+        <MobileShell>
           <AnalyticsApp />
         </MobileShell>
       </div>

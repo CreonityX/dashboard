@@ -14,7 +14,7 @@ export default function FinancePage() {
       
       {/* Mobile Shell provides the mobile top bar (Search, Bell, Messages) + Bottom Nav */}
       <div className="lg:hidden h-full w-full">
-        <MobileShell hideTopBar>
+        <MobileShell>
           <FinanceApp />
         </MobileShell>
       </div>

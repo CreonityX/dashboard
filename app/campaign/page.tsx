@@ -15,7 +15,7 @@ export default function CampaignPage() {
       
       {/* Mobile Shell provides the mobile top bar (Search, Bell, Messages) + Bottom Nav */}
       <div className="lg:hidden h-full w-full">
-        <MobileShell hideTopBar>
+        <MobileShell>
           <Suspense fallback={<div className="p-4">Loading campaign...</div>}>
             <CampaignApp />
           </Suspense>

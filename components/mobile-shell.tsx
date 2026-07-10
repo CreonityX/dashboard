@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Magnifier, Bell, BellFill, ChevronLeft, Comment, CommentFill } from "@gravity-ui/icons"
+import { Calendar, Bell, BellFill, ChevronLeft, Comment, CommentFill } from "@gravity-ui/icons"
 import { Typography, Badge } from "@heroui/react"
 import { cn } from "@/lib/utils"
 import { mobileNavItems } from "@/components/menu-data"
@@ -43,14 +43,13 @@ export function MobileShell({
             </div>
           ) : (
             <>
-              <button 
-                type="button" 
-                aria-label="Search" 
-                className="flex items-center justify-center h-10 w-10 -ml-2 text-[#0a0a0a] dark:text-white"
-                onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+              <Link 
+                href="/calendar"
+                aria-label="Calendar" 
+                className="flex items-center justify-center h-10 w-10 text-[#0a0a0a] dark:text-white relative"
               >
-                <Magnifier width={28} height={28} />
-              </button>
+                <Calendar width={28} height={28} />
+              </Link>
               <div className="flex items-center gap-5">
                 <Link href="/notifications" aria-label="Notifications" className="flex items-center justify-center h-10 w-10 text-[#0a0a0a] dark:text-white relative">
                   {activeId === "notifications" ? (
