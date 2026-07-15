@@ -165,7 +165,9 @@ export function DesktopSidebar({ activeId: propActiveId }: { activeId?: string }
             className="flex w-full items-center text-[#0a0a0a] dark:text-white"
           >
             <span className="flex shrink-0 items-center justify-center" style={{ width: RAIL_W }}>
-              <ProfileSphere className="h-7 w-7" />
+              <div className={cn("h-7 w-7 transition-transform rounded-full", activeId === "profile" && "scale-[1.06] ring-2 ring-offset-[0.5px] ring-black dark:ring-white ring-offset-white dark:ring-offset-[#0a0a0a]")}>
+                <ProfileSphere className="h-full w-full block" />
+              </div>
             </span>
             <Typography
               type="h3"

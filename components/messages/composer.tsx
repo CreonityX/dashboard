@@ -11,6 +11,7 @@ import {
   File as FileIcon,
   Folder,
   Calendar,
+  Xmark,
 } from "@gravity-ui/icons"
 import { toast } from "sonner"
 
@@ -27,7 +28,15 @@ const ATTACH_ITEMS: AttachItem[] = [
   { id: "schedule", label: "Schedule", icon: Calendar },
 ]
 
-export function Composer({ onSend }: { onSend: (text: string) => void }) {
+export function Composer({ 
+  onSend,
+  replyingTo,
+  onCancelReply
+}: { 
+  onSend: (text: string) => void
+  replyingTo?: any
+  onCancelReply?: () => void
+}) {
   const [value, setValue] = useState("")
 
   function send() {
@@ -39,7 +48,26 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
   }
 
   return (
-    <div className="shrink-0 border-t border-[#efefef] bg-white px-0 dark:border-white/10 dark:bg-[#0a0a0a]">
+    <div className="shrink-0 border-t border-[#efefef] bg-white px-0 dark:border-white/10 dark:bg-[#0a0a0a] flex flex-col">
+      {replyingTo && (
+        <div className="flex items-center justify-between bg-black/5 dark:bg-white/5 px-4 py-2 border-b border-[#efefef] dark:border-white/10">
+          <div className="flex flex-col min-w-0">
+            <span className="text-[12px] font-bold text-[#0a0a0a] dark:text-white truncate">
+              Replying to {replyingTo.sender === "me" ? "You" : (replyingTo.senderName || "Unknown")}
+            </span>
+            <span className="text-[12px] text-[#737373] dark:text-[#a1a1aa] truncate mt-0.5">
+              {replyingTo.kind === "text" ? replyingTo.text : "Attachment"}
+            </span>
+          </div>
+          <button 
+            type="button" 
+            onClick={onCancelReply}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/10 dark:bg-white/10 text-[#0a0a0a] dark:text-white hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+          >
+            <Xmark className="h-3 w-3" />
+          </button>
+        </div>
+      )}
       <div className="flex items-center h-[56px] bg-transparent transition-colors focus-within:bg-black/[0.02] dark:focus-within:bg-white/[0.02]">
         {/* Attachment popover */}
         <Popover placement={"top" as any} offset={15} crossOffset={70 as any}>

@@ -7,7 +7,8 @@ type Base = {
   sender: Sender; 
   time: string; 
   senderName?: string; 
-  senderTone?: AvatarTone 
+  senderTone?: AvatarTone;
+  replyTo?: any; // Using any to avoid circular definition issues if any, though TS usually handles it. Actually, better yet, we can use `Message` if we use an interface or a recursive type. Let's try `replyTo?: any` for simplicity since this is UI data. Or `replyTo?: Message`.
 }
 
 export type Message =

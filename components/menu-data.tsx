@@ -12,6 +12,8 @@ import {
   BellFill,
   Person,
   PersonFill,
+  Briefcase,
+  BriefcaseFill,
 } from "@gravity-ui/icons"
 import { Wallet } from "lucide-react"
 
@@ -29,6 +31,7 @@ export type MenuItem = {
 export const primaryItems: MenuItem[] = [
   { id: "home", label: "Home", icon: House, activeIcon: HouseFill },
   { id: "campaign", label: "Campaign", icon: Megaphone },
+  { id: "workspace", label: "Workspace", icon: Briefcase, activeIcon: BriefcaseFill },
   { id: "search", label: "Search", icon: Magnifier },
   { id: "notifications", label: "Notifications", icon: Bell, activeIcon: BellFill },
   { id: "analytics", label: "Analytics", icon: ChartAreaStacked },
@@ -40,6 +43,6 @@ export const mobileNavItems: MenuItem[] = [
   { id: "home", label: "Home", icon: House, activeIcon: HouseFill },
   { id: "campaign", label: "Campaign", icon: Megaphone },
   { id: "search", label: "Search", icon: Magnifier },
-  { id: "analytics", label: "Analytics", icon: ChartAreaStacked },
+  { id: "workspace", label: "Workspace", icon: Briefcase, activeIcon: BriefcaseFill },
   { id: "profile", label: "Profile", icon: Person, activeIcon: PersonFill },
 ]

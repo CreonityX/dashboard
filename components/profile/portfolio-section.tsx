@@ -24,6 +24,8 @@ import {
   horizontalListSortingStrategy
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { PostDetailModal } from "@/components/shared/post-detail-modal"
+import { MOCK_BRANDS } from "@/components/brand/brand-data"
 
 // ── Sortable Item Wrapper ──────────────────────────────────────────
 function SortableMasonryItem({ 
@@ -31,13 +33,15 @@ function SortableMasonryItem({
   isEditing, 
   onToggleVisibility,
   tabs,
-  onMoveToTab
+  onMoveToTab,
+  onPostClick
 }: { 
   item: PortfolioItem; 
   isEditing?: boolean; 
   onToggleVisibility: (id: string) => void;
   tabs: PortfolioTab[];
   onMoveToTab: (id: string, tabId: string) => void;
+  onPostClick?: (item: PortfolioItem) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, data: { type: "item" } })
 
@@ -49,6 +53,9 @@ function SortableMasonryItem({
 
   const itemContent = (
     <div 
+      onClick={() => {
+        if (!isEditing && onPostClick) onPostClick(item)
+      }}
       className={cn(
         "relative overflow-hidden rounded-[16px] transition-all duration-300",
         isDragging && "scale-[1.03] shadow-xl",
@@ -290,6 +297,31 @@ export function PortfolioSection({
 }) {
   const { profile, setProfile } = useProfile()
   
+  const [selectedPost, setSelectedPost] = useState<any | null>(null)
+
+  const openPost = (post: any) => {
+    setSelectedPost(post)
+    window.history.pushState({ modal: "portfolio-post" }, "")
+  }
+
+  const closePost = () => {
+    if (window.history.state?.modal === "portfolio-post") {
+      window.history.back()
+    } else {
+      setSelectedPost(null)
+    }
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (selectedPost) {
+        setSelectedPost(null)
+      }
+    }
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [selectedPost])
+
   const [activeTabId, setActiveTabId] = useState<string>("all")
   
   // Tutorial State
@@ -522,6 +554,29 @@ export function PortfolioSection({
                         onToggleVisibility={handleToggleVisibility}
                         tabs={profile.portfolioTabs}
                         onMoveToTab={handleMoveToTab}
+                        onPostClick={(clickedItem) => {
+                          openPost({
+                            ...item,
+                            id: clickedItem.id,
+                            title: clickedItem.title,
+                            image: clickedItem.imageUrl,
+                            platform: "ig",
+                            engagement: "24.5K",
+                            brandLogo: MOCK_BRANDS.nike.logo,
+                            brandName: MOCK_BRANDS.nike.name,
+                            timestamp: "2 days ago",
+                            type: clickedItem.duration ? "reel" : "image",
+                            reach: Math.floor(Math.random() * 50000) + 5000,
+                            likes: Math.floor(Math.random() * 5000) + 100,
+                            comments: Math.floor(Math.random() * 200) + 10,
+                            saves: Math.floor(Math.random() * 100) + 5,
+                            shares: Math.floor(Math.random() * 50) + 2,
+                            er: (Math.random() * 10 + 2).toFixed(1),
+                            accent: "#ec4899",
+                            date: "Oct 12",
+                            viewDuration: clickedItem.duration || "N/A"
+                          })
+                        }}
                       />
                     ))}
                   </div>
@@ -538,6 +593,13 @@ export function PortfolioSection({
           ))}
         </Tabs>
       </DndContext>
+
+      {selectedPost && (
+        <PostDetailModal 
+          selectedPost={selectedPost}
+          onClose={closePost}
+        />
+      )}
     </div>
   )
 }

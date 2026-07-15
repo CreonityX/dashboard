@@ -20,9 +20,9 @@ export function MobileNav() {
           const inner = (
             <>
               {item.id === "profile" ? (
-                <ProfileSphere
-                  className={cn("h-7 w-7 transition-transform", isActive && "scale-[1.06] ring-2 ring-[#0060ff] ring-offset-1 rounded-full")}
-                />
+                <div className={cn("h-7 w-7 transition-transform rounded-full", isActive && "scale-[1.06] ring-2 ring-offset-[0.5px] ring-black dark:ring-white ring-offset-white dark:ring-offset-[#0a0a0a]")}>
+                  <ProfileSphere className="h-full w-full block" />
+                </div>
               ) : (
                 <Icon
                   width={28}

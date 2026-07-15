@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ResponsiveContainer, AreaChart, Area } from "recharts"
+import Link from "next/link"
 import {
   ArrowLeft,
   ArrowUp,
@@ -745,6 +746,38 @@ const PIPELINE_DEALS: PipelineDeal[] = [
     },
   },
   {
+    id: "deal-glossier",
+    campaignId: "glossier-glow",
+    stage: "content",
+    total: "₹2,100",
+    due: "Aug 08",
+    nextStep: "Upload first draft for review.",
+    timeline: [
+      { id: "t1", timestamp: "Jul 10", label: "Bid submitted", status: "completed" },
+      { id: "t2", timestamp: "Jul 12", label: "Contract signed", status: "completed" },
+      { id: "t3", timestamp: "Jul 13", label: "Workspace unlocked", status: "completed" },
+      { id: "t4", timestamp: "Today, 10:00 AM", label: "Upload content for review", status: "active" },
+      { id: "t5", timestamp: "", label: "Brand review", status: "pending" },
+      { id: "t6", timestamp: "", label: "Go live", status: "pending" },
+    ],
+    messages: [{ from: "Brand", text: "Excited to see your first draft! Drop it here when ready.", total: "₹2,100" }],
+    contract: {
+      totalAmount: "₹2,100",
+      usageRights: "Organic repost only",
+      exclusivity: "None",
+      deadline: "Aug 08, 2026",
+      revisionRounds: 1,
+      creatorSigned: true,
+      brandSigned: true,
+      deliverables: [
+        { id: "d1", name: "1 Reel (45-60s)", type: "post", status: "pending" },
+      ],
+      paymentMilestones: [
+        { id: "m1", label: "On content approval", amount: "₹2,100", type: "fixed", status: "locked" },
+      ],
+    },
+  },
+  {
     id: "deal-northline",
     campaignId: "northline",
     stage: "tracking",
@@ -1231,8 +1264,6 @@ function PipelineView({ campaigns, onOpen }: { campaigns: Campaign[]; onOpen: (c
   const columns = [
     { id: "bid", label: "Bid sent" },
     { id: "negotiation", label: "Negotiation" },
-    { id: "contract", label: "Contract" },
-    { id: "tracking", label: "Tracking" },
   ] as const
 
   return (
@@ -2589,7 +2620,7 @@ function CampaignDetail({
             <div className="p-5 lg:p-6">
               {/* Top row */}
               <div className="flex items-start justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-4">
+                <Link href={`/brand/${campaign.brand.toLowerCase().replace(/\\s+/g, '')}`} className="flex min-w-0 items-center gap-4 hover:opacity-80 transition-opacity">
                   {/* Large brand mark */}
                   <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#efefef] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:border-[#27272a] dark:bg-[#111111]">
                     <BrandLogo domain={campaign.domain} name={campaign.brand} className="absolute inset-0 h-full w-full object-cover" />
@@ -2603,7 +2634,7 @@ function CampaignDetail({
                     </div>
                     <p className="mt-0.5 text-[12.5px] text-gray-400">{campaign.location}</p>
                   </div>
-                </div>
+                </Link>
                 {/* Actions */}
                 <div className="flex shrink-0 items-center gap-2">
                   <button
@@ -2702,9 +2733,6 @@ function CampaignDetail({
           {/* ── Unified content card ── */}
           <CardShell className="relative z-0 -mt-6 flex flex-1 flex-col overflow-hidden rounded-t-none pt-11 shadow-sm xl:min-h-0">
             <ScrollShadow hideScrollBar className="flex-1 xl:min-h-0">
-              {isContentStage ? (
-                getStageView()
-              ) : (
                 <>
                   {/* Brief */}
                   <div className="p-5 lg:p-6">
@@ -2765,7 +2793,6 @@ function CampaignDetail({
                     </p>
                   </div>
                 </>
-              )}
             </ScrollShadow>
             
             {/* Mobile Apply Button */}
@@ -3255,7 +3282,28 @@ export function CampaignApp() {
   const [campaigns, setCampaigns] = useState([...CAMPAIGNS, ...INVITATION_CAMPAIGNS])
 
   const selectedCampaign = useMemo(() => campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? null, [campaigns, selectedCampaignId])
-  const openCampaign = (campaign: Campaign) => setSelectedCampaignId(campaign.id)
+  const openCampaign = (campaign: Campaign) => {
+    setSelectedCampaignId(campaign.id)
+    window.history.pushState({ modal: "campaign" }, "")
+  }
+
+  const closeCampaign = () => {
+    if (window.history.state?.modal === "campaign") {
+      window.history.back()
+    } else {
+      setSelectedCampaignId(null)
+    }
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (selectedCampaignId) {
+        setSelectedCampaignId(null)
+      }
+    }
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [selectedCampaignId])
 
   const toggleSave = (id: string) => {
     setCampaigns((prev) => prev.map((c) => (c.id === id ? { ...c, saved: !c.saved } : c)))
@@ -3265,7 +3313,7 @@ export function CampaignApp() {
     <div className={cn("flex h-full w-full flex-col bg-white dark:bg-[#0a0a0a]", selectedCampaign ? "overflow-y-auto xl:overflow-hidden" : "overflow-y-auto")}>
       <div className={cn("flex w-full flex-col px-3 md:px-6 pt-4 md:pt-6 lg:pt-8", selectedCampaign ? "flex-1 pb-4 xl:min-h-0" : "pb-12")}>
         {selectedCampaign ? (
-          <CampaignDetail campaign={selectedCampaign} campaigns={campaigns} onBack={() => setSelectedCampaignId(null)} onOpen={openCampaign} onToggleSave={() => toggleSave(selectedCampaign.id)} />
+          <CampaignDetail campaign={selectedCampaign} campaigns={campaigns} onBack={closeCampaign} onOpen={openCampaign} onToggleSave={() => toggleSave(selectedCampaign.id)} />
         ) : (
           <>
             <div className="mb-7 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">

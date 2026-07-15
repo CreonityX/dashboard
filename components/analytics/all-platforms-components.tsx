@@ -21,8 +21,10 @@ import { faInstagram, faXTwitter, faTiktok, faSnapchat, faYoutube } from "@forta
 import { Bookmark, Play, Pause, Volume2, VolumeX, Maximize2, Send, Eye as LucideEye, Activity as LucideActivity, Clock as LucideClock, TrendingUp as LucideTrendingUp, ChevronRight as LucideChevronRight, Heart as LucideHeart, MessageCircle as LucideMessageCircle, Bookmark as LucideBookmark, Send as LucideSend } from "lucide-react"
 import {
   ArrowUpRight,
+  Bookmark as GravityBookmark,
   Bulb,
   ChartColumn,
+  ChartLine,
   ChevronRight,
   Clock,
   Comment,
@@ -30,7 +32,9 @@ import {
   Globe,
   Heart,
   MapPin,
+  PaperPlane,
   Person,
+  Pulse,
 } from "@gravity-ui/icons"
 import { cn } from "@/lib/utils"
 import {
@@ -38,6 +42,7 @@ import {
   type AnalyticsTimeframe,
   type PlatformMetric,
 } from "./platform-analytics-data"
+import { PostDetailModal } from "@/components/shared/post-detail-modal"
 
 const cardClass = "rounded-2xl border border-gray-200/70 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-[#0a0a0a]"
 const genderColors = ["#0ea5e9", "#38bdf8", "#bae6fd"]
@@ -631,260 +636,21 @@ export function PremiumPostsList({ platform, timeframe, postType = "all" }: { pl
               {/* Thumbnail representation */}
               <PostThumbnail post={post} ratioClass={post.ratioClass} />
 
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/75 backdrop-blur-[3px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-4 text-white p-4">
-                <span className="text-[11px] font-bold tracking-wider text-white/50 uppercase">Metrics Overview</span>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3 w-full max-w-[150px] text-left">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Eye className="size-4 shrink-0 text-white/75" />
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-bold leading-none">{formatValue(post.reach)}</span>
-                      <span className="text-[8px] font-semibold text-white/55 mt-0.5">Reach</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Heart className="size-4 shrink-0 text-white/75" />
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-bold leading-none">{formatValue(post.likes)}</span>
-                      <span className="text-[8px] font-semibold text-white/55 mt-0.5">Likes</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Comment className="size-4 shrink-0 text-white/75" />
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-bold leading-none">{formatValue(post.comments)}</span>
-                      <span className="text-[8px] font-semibold text-white/55 mt-0.5">Comments</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Bookmark className="size-4 shrink-0 text-white/75" />
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-bold leading-none">{formatValue(post.saves)}</span>
-                      <span className="text-[8px] font-semibold text-white/55 mt-0.5">Saves</span>
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[10px] font-bold mt-2 text-white/60 group-hover:translate-y-0 translate-y-1 transition-transform">Click to play & view data</span>
-              </div>
             </div>
           )
         })}
       </div>
 
       {/* Floating Centered Card overlay styled like Instagram Reels Split player */}
-      {selectedPost && (() => {
-        // Determine layout ratios based on format
-        let mediaRatioClass = "aspect-[9/16]" // default Reel
-        let containerMaxWidth = "max-w-5xl"
-        let mediaWidthClass = "md:w-[50%]"
-        let detailsWidthClass = "md:w-[50%]"
-        
-        const typeLower = selectedPost.type.toLowerCase()
-        const isReel = selectedPost.platform === "tt" || typeLower.includes("reel") || selectedPost.displayType === "REEL"
-        const isYoutubeVideo = selectedPost.platform === "yt" && !typeLower.includes("short")
-
-        if (isReel) {
-          mediaRatioClass = "aspect-[9/16]"
-          containerMaxWidth = "max-w-6xl"
-          mediaWidthClass = "md:w-[50%]"
-          detailsWidthClass = "md:w-[50%]"
-        } else if (isYoutubeVideo) {
-          mediaRatioClass = "aspect-video" // 16:9
-          containerMaxWidth = "max-w-8xl"
-          mediaWidthClass = "md:w-[55%]"
-          detailsWidthClass = "md:w-[45%]"
-        } else {
-          // Standard Image Post or Carousel -> 4:3 ratio
-          mediaRatioClass = "aspect-[4/3]"
-          containerMaxWidth = "max-w-8xl"
-          mediaWidthClass = "md:w-[50%]"
-          detailsWidthClass = "md:w-[50%]"
-        }
-
-
-        // Define class variations based on layout style:
-        // YouTube videos are vertical layouts (video on top, info below)
-        // Reels and standard posts are side-by-side horizontal layouts
-        
-        let parentClass = ""
-        let leftWrapperClass = ""
-        let playerBoxClass = ""
-        let detailsClass = ""
-        
-        if (isReel) {
-          parentClass = "w-full h-full md:h-[90vh] md:max-h-[920px] md:w-fit bg-white dark:bg-[#0c0c0e] rounded-none md:rounded-2xl border-0 md:border border-gray-200/80 dark:border-white/10 relative flex flex-col md:flex-row overflow-y-auto md:overflow-hidden cursor-default animate-in zoom-in-95 duration-350 ease-out"
-          leftWrapperClass = "p-1.5 sm:p-2 flex items-center justify-center h-full shrink-0"
-          playerBoxClass = "bg-black relative flex items-center justify-center overflow-hidden cursor-pointer select-none group/player h-full w-auto aspect-[9/16] rounded-xl border border-gray-150 dark:border-white/5"
-          detailsClass = "flex flex-col justify-between p-6 sm:p-7 bg-white dark:bg-[#0c0c0e] overflow-y-auto h-full w-full md:w-[520px] shrink-0"
-        } else if (isYoutubeVideo) {
-          // YT stack layout: max-w-4xl, fixed vertical layout
-          parentClass = "w-full h-full md:h-fit md:max-h-[92vh] bg-white dark:bg-[#0c0c0e] rounded-none md:rounded-2xl border-0 md:border border-gray-200/80 dark:border-white/10 relative flex flex-col overflow-y-auto md:overflow-hidden cursor-default animate-in zoom-in-95 duration-350 ease-out max-w-4xl"
-          leftWrapperClass = "p-2 sm:p-2.5 flex items-center justify-center w-full shrink-0"
-          playerBoxClass = "bg-black relative flex items-center justify-center overflow-hidden cursor-pointer select-none group/player w-full aspect-video rounded-xl border border-gray-150 dark:border-white/5"
-          detailsClass = "flex flex-col justify-between p-6 bg-white dark:bg-[#0c0c0e] overflow-y-auto w-full h-fit"
-        } else {
-          // Standard Image Post or Carousel (Horizontal 3:4 layout with rounded borders)
-          parentClass = "w-full h-full md:h-[90vh] md:max-h-[850px] md:w-fit bg-white dark:bg-[#0c0c0e] rounded-none md:rounded-2xl border-0 md:border border-gray-200/80 dark:border-white/10 relative flex flex-col md:flex-row overflow-y-auto md:overflow-hidden cursor-default animate-in zoom-in-95 duration-350 ease-out"
-          leftWrapperClass = "p-1.5 sm:p-2 flex items-center justify-center h-full shrink-0"
-          playerBoxClass = "bg-black relative flex items-center justify-center overflow-hidden cursor-pointer select-none group/player h-full w-auto aspect-[3/4] rounded-xl border border-gray-150 dark:border-white/5"
-          detailsClass = "flex flex-col justify-between p-6 sm:p-7 bg-white dark:bg-[#0c0c0e] overflow-y-auto h-full w-full md:w-[400px] shrink-0 border-l border-gray-100 dark:border-white/5"
-        }
-
-        return (
-          <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-8 bg-black/65 backdrop-blur-sm animate-in fade-in duration-300 cursor-pointer"
-            onClick={() => {
-              setIsPlaying(false)
-              setSelectedPost(null)
-            }}
-          >
-            {/* Floating screen viewport top-right close button */}
-            <button 
-              onClick={() => {
-                setIsPlaying(false)
-                setSelectedPost(null)
-              }}
-              className="fixed top-4 right-4 md:top-6 md:right-6 z-[110] text-white/70 hover:text-white transition-colors text-[28px] font-light leading-none p-2"
-            >
-              ✕
-            </button>
-            <div 
-              className={parentClass}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Left Column Container (Padded wrapper framing the video player in a rounded box) */}
-              <div className={leftWrapperClass}>
-                <div 
-                  className={playerBoxClass}
-                >
-                  {/* Clean media mockup representation of the embed */}
-                  <img 
-                    src={`/images/pinterest-${(selectedPost.title.charCodeAt(0) % 3) + 1}.jpg`} 
-                    alt={selectedPost.title} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-
-              {/* Right Column (Data/Details View): Premium Creator dashboard */}
-              <div 
-                className={detailsClass}
-                style={{
-                  minHeight: "auto"
-                }}
-              >
-                {/* Creator details & header */}
-                {/* Creator details & header */}
-                <div className="flex flex-col gap-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600 flex items-center justify-center text-white font-extrabold text-[13px] shadow-sm select-none ring-2 ring-white dark:ring-[#0c0c0e]">
-                        CR
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[14px] font-bold text-gray-900 dark:text-white leading-none tracking-tight">creonity.app</span>
-                          <span className="h-3.5 w-3.5 bg-[#0060ff] text-[8px] flex items-center justify-center rounded-full text-white font-black">✓</span>
-                        </div>
-                        <span className="text-[11px] font-medium text-gray-500 mt-1">Creator Hub Analytics</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Caption / Description */}
-                  <div className="flex flex-col">
-                    {isYoutubeVideo ? (
-                      <>
-                        <span className="text-[15px] font-bold text-gray-900 dark:text-white leading-snug">{selectedPost.title}</span>
-                        <span className="text-[13px] text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed">
-                          In this video, we dive deep into the analytics and performance of our latest drop. Watch till the end for exclusive insights!
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-[14px] leading-relaxed text-gray-800 dark:text-gray-200 font-medium">
-                        {selectedPost.title} 🎬🍾
-                      </span>
-                    )}
-                    <span className="text-[12px] font-medium text-gray-400 dark:text-gray-500 mt-2">{selectedPost.date}, 2026</span>
-                  </div>
-
-                  {/* Detailed Analytics Grid List */}
-                  <div className="flex flex-col mt-6">
-                    <h3 className="text-[15px] font-bold text-gray-900 dark:text-white mb-4">Metrics & Engagement</h3>
-                    
-                    <div className="grid grid-cols-2 gap-y-5 gap-x-4">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-                          <LucideEye className="w-4 h-4" />
-                          <span className="text-[12px] font-medium">Reach</span>
-                        </div>
-                        <span className="text-[15px] font-bold text-gray-900 dark:text-white">{Number(selectedPost.reach).toLocaleString()}</span>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-                          <LucideHeart className="w-4 h-4" />
-                          <span className="text-[12px] font-medium">Likes</span>
-                        </div>
-                        <span className="text-[15px] font-bold text-gray-900 dark:text-white">{Number(selectedPost.likes).toLocaleString()}</span>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-                          <LucideMessageCircle className="w-4 h-4" />
-                          <span className="text-[12px] font-medium">Comments</span>
-                        </div>
-                        <span className="text-[15px] font-bold text-gray-900 dark:text-white">{Number(selectedPost.comments).toLocaleString()}</span>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-                          <LucideBookmark className="w-4 h-4" />
-                          <span className="text-[12px] font-medium">Saved</span>
-                        </div>
-                        <span className="text-[15px] font-bold text-gray-900 dark:text-white">{Number(selectedPost.saves).toLocaleString()}</span>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-                          <LucideSend className="w-4 h-4" />
-                          <span className="text-[12px] font-medium">Shares</span>
-                        </div>
-                        <span className="text-[15px] font-bold text-gray-900 dark:text-white">{Number(selectedPost.shares).toLocaleString()}</span>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-                          <LucideActivity className="w-4 h-4" />
-                          <span className="text-[12px] font-medium">Engagement Rate</span>
-                        </div>
-                        <span className="text-[15px] font-bold tracking-tight" style={{ color: selectedPost.accent }}>{selectedPost.er}%</span>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-                          <LucideClock className="w-4 h-4" />
-                          <span className="text-[12px] font-medium">Avg Watch Time</span>
-                        </div>
-                        <span className="text-[15px] font-bold text-gray-900 dark:text-white">{selectedPost.viewDuration}</span>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-1">
-                          <LucideTrendingUp className="w-4 h-4" />
-                          <span className="text-[12px] font-medium">Est. Revenue</span>
-                        </div>
-                        <span className="text-[15px] font-bold text-emerald-500">₹{(selectedPost.reach * 0.18).toLocaleString(undefined, {maximumFractionDigits:0})}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )
-      })()}
+      {selectedPost && (
+        <PostDetailModal 
+          selectedPost={selectedPost} 
+          onClose={() => {
+            setIsPlaying(false)
+            setSelectedPost(null)
+          }} 
+        />
+      )}
     </div>
   )
 }

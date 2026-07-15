@@ -12,12 +12,12 @@ interface EventPopoverProps {
   event: CalendarEvent
   children: React.ReactNode
   allowAutoOpen?: boolean
+  disableHover?: boolean
 }
 
 export function EventPopover({ event, children, allowAutoOpen = false }: EventPopoverProps) {
   const [isOpen, setIsOpen] = useState(false)
   const isMobile = useMediaQuery("(max-width: 768px)")
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const searchParams = useSearchParams()
   const isTargetEvent = searchParams?.get("eventId") === event.id
@@ -28,19 +28,6 @@ export function EventPopover({ event, children, allowAutoOpen = false }: EventPo
       return () => clearTimeout(t)
     }
   }, [allowAutoOpen, isTargetEvent])
-
-  const handleMouseEnter = () => {
-    if (isMobile) return
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    setIsOpen(true)
-  }
-
-  const handleMouseLeave = () => {
-    if (isMobile) return
-    timeoutRef.current = setTimeout(() => {
-      setIsOpen(false)
-    }, 300)
-  }
   const config = EVENT_TYPE_CONFIG[event.type]
 
   // e.g. "Mon, Jun 29"
@@ -164,14 +151,10 @@ export function EventPopover({ event, children, allowAutoOpen = false }: EventPo
             e.stopPropagation();
             setIsOpen(!isOpen);
           }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
         >{children}</div>
       </PopoverTrigger>
       <PopoverContent 
         className="p-0 rounded-2xl shadow-xl border border-[#efefef] dark:border-[#27272a] bg-white dark:bg-[#0a0a0a] w-[360px] outline-none"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
         {innerContent}
       </PopoverContent>

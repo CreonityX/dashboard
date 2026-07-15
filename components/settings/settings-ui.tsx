@@ -18,8 +18,8 @@ export function SettingsPage({ title, description, onBack, action, children, siz
   return (
     <div
       className={cn(
-        "w-full pt-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500",
-        size === "wide" ? "max-w-[1120px]" : "max-w-[900px]"
+        "mx-auto w-full pt-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500",
+        size === "wide" ? "max-w-[1120px]" : "max-w-5xl"
       )}
     >
       <SettingsHeader title={title} description={description} onBack={onBack} action={action} />
@@ -71,7 +71,7 @@ export function SettingsSection({
   children: ReactNode
 }) {
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4 max-w-3xl">
       {(title || description) && (
         <div className="flex flex-col gap-1">
           {title ? <h2 className="text-[16px] font-semibold tracking-tight text-[#0a0a0a] dark:text-white">{title}</h2> : null}

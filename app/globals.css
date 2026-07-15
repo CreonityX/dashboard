@@ -5,6 +5,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@font-face {
+  font-family: 'Champ Black';
+  src: url('/fonts/Champ-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-space-grotesk);

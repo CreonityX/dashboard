@@ -66,6 +66,8 @@ function BrandMark({ campaign, size = "md" }: { campaign: Campaign; size?: "sm" 
   )
 }
 
+import Link from "next/link"
+
 export function RecommendedCampaignCard({ campaign, className }: { campaign: Campaign; className?: string }) {
   const isUnavailable = campaign.status === "Filled" || campaign.status === "Closed"
   const brandColors = useBrandColor(campaign.domain)
@@ -88,13 +90,13 @@ export function RecommendedCampaignCard({ campaign, className }: { campaign: Cam
       )}
     >
       <div className="mb-4 flex h-9 items-center justify-between gap-3 w-full">
-        <div className="flex min-w-0 items-center gap-3">
+        <Link href={`/brand/${campaign.brand.toLowerCase().replace(/\\s+/g, '')}`} onClick={(e) => e.stopPropagation()} className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
           <BrandMark campaign={campaign} />
           <div className="min-w-0 flex flex-col justify-center gap-0.5">
             <p className="truncate text-[14px] font-bold leading-none text-[#0a0a0a] dark:text-white">{campaign.brand}</p>
             <p className="truncate text-[12px] font-medium leading-none text-gray-500">{campaign.niche} · {campaign.location}</p>
           </div>
-        </div>
+        </Link>
         <div className="flex shrink-0 items-center gap-1.5">
           {campaign.match ? (
             <span className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md bg-[#0060ff]/10 px-2.5 text-[11px] font-bold text-[#0060ff] dark:bg-[#4d90fe]/15 dark:text-[#4d90fe]">{campaign.match}% match</span>

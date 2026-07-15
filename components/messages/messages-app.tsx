@@ -15,6 +15,7 @@ export function MessagesApp() {
   const [extra, setExtra] = useState<Record<string, Message[]>>({})
   const [typing, setTyping] = useState<Record<string, boolean>>({})
   const [mobileView, setMobileView] = useState<"list" | "chat">("list")
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const activeConvoId = activeId ? activeId.split(":")[0] : null
@@ -53,9 +54,17 @@ export function MessagesApp() {
       ...prev,
       [activeId]: [
         ...(prev[activeId] ?? []),
-        { id: `${activeId}-${Date.now()}`, sender: "me", time: now, kind: "text", text },
+        { 
+          id: `${activeId}-${Date.now()}`, 
+          sender: "me", 
+          time: now, 
+          kind: "text", 
+          text,
+          replyTo: replyingTo || undefined
+        },
       ],
     }))
+    setReplyingTo(null)
 
     // Simulate typing indicator response
     setTyping((prev) => ({ ...prev, [activeId]: true }))
@@ -70,6 +79,43 @@ export function MessagesApp() {
         ],
       }))
     }, 2000)
+  }
+
+  function handleReschedule(originalMsg: any, newDate: string, newTime: string) {
+    if (!activeId) return
+    const now = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    
+    // newDate is "YYYY-MM-DD"
+    const [year, month, day] = newDate.split("-").map(Number)
+    const dateObj = new Date(year, month - 1, day)
+    const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    
+    // newTime is "HH:MM-HH:MM"
+    const [start, end] = newTime.split("-")
+    const formatTimeStr = (t: string) => {
+      const [h, m] = t.split(":").map(Number)
+      const ampm = h >= 12 ? 'PM' : 'AM'
+      const h12 = h % 12 || 12
+      return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`
+    }
+    const formattedTime = `${formatTimeStr(start)} – ${formatTimeStr(end)}`
+
+    setExtra((prev) => ({
+      ...prev,
+      [activeId]: [
+        ...(prev[activeId] ?? []),
+        { 
+          id: `${activeId}-${Date.now()}`, 
+          sender: "me", 
+          time: now, 
+          kind: "booking", 
+          title: originalMsg.title,
+          date: formattedDate,
+          timeRange: formattedTime,
+          status: "pending"
+        },
+      ],
+    }))
   }
 
   return (
@@ -113,6 +159,8 @@ export function MessagesApp() {
                     key={m.id}
                     message={m}
                     isGrouped={i > 0 && messages[i - 1].sender === m.sender}
+                    onReply={(msg) => setReplyingTo(msg)}
+                    onReschedule={handleReschedule}
                   />
                 ))}
                 
@@ -127,7 +175,11 @@ export function MessagesApp() {
               </div>
             </div>
 
-            <Composer onSend={handleSend} />
+            <Composer 
+              onSend={handleSend} 
+              replyingTo={replyingTo} 
+              onCancelReply={() => setReplyingTo(null)} 
+            />
           </>
         )}
       </div>

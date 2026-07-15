@@ -1,8 +1,10 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Popover, PopoverTrigger, PopoverContent, Button, DatePicker, DateField, Calendar, TimeField, Checkbox, Dropdown, Drawer, Typography } from "@heroui/react"
+import { Popover, PopoverTrigger, PopoverContent, Button, Checkbox, Dropdown, Drawer, Typography } from "@heroui/react"
 import { parseDate, parseTime } from "@internationalized/date"
+import { CustomCalendar } from "@/components/ui/custom-calendar"
+import { CustomTimePicker } from "@/components/ui/custom-time-picker"
 import { CalendarEvent, EVENT_TYPE_CONFIG } from "@/lib/calendar-data"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -15,6 +17,27 @@ interface CreateEventPopoverProps {
   event?: CalendarEvent
   allowAutoOpen?: boolean
   onSave?: (event: CalendarEvent) => void
+}
+
+function DateButton({ date, onChange }: { date: string, onChange: (d: string) => void }) {
+  const [open, setOpen] = useState(false)
+  let formatted = "Select date"
+  if (date) {
+    const [y, m, d] = date.split("-").map(Number)
+    formatted = new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+  return (
+    <Popover isOpen={open} onOpenChange={setOpen} placement="bottom-start">
+      <PopoverTrigger>
+        <button className="h-9 px-3 flex items-center whitespace-nowrap shrink-0 rounded-[10px] bg-[#f4f4f5] dark:bg-[#27272a] hover:bg-[#e4e4e7] dark:hover:bg-[#3f3f46] text-[13px] font-semibold text-[#0a0a0a] dark:text-white transition-colors">
+          {formatted}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 border border-[#e4e4e7] dark:border-[#27272a] shadow-xl rounded-[20px] overflow-hidden">
+        <CustomCalendar value={date} onChange={(d) => { onChange(d); setOpen(false); }} />
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 export function CreateEventPopover({ children, onSave = () => {} }: CreateEventPopoverProps) {
@@ -73,75 +96,25 @@ export function CreateEventPopover({ children, onSave = () => {} }: CreateEventP
                 </div>
                 <div className="flex flex-col gap-1 w-full">
                   <div className="flex items-center gap-1.5">
-                    <DatePicker 
-                      aria-label="Event Date"
-                      className="w-[125px] shrink-0" 
-                      value={draftEvent.date ? parseDate(draftEvent.date) : null}
-                      onChange={(val) => val && setDraftEvent({ ...draftEvent, date: val.toString() })}
-                    >
-                      <DateField.Group variant="secondary">
-                        <DateField.Input>
-                          {(segment) => <DateField.Segment segment={segment} />}
-                        </DateField.Input>
-                        <DateField.Suffix>
-                          <DatePicker.Trigger>
-                            <DatePicker.TriggerIndicator />
-                          </DatePicker.Trigger>
-                        </DateField.Suffix>
-                      </DateField.Group>
-                      <DatePicker.Popover>
-                        <Calendar aria-label="Event date">
-                          <Calendar.Header>
-                            <Calendar.YearPickerTrigger>
-                              <Calendar.YearPickerTriggerHeading />
-                              <Calendar.YearPickerTriggerIndicator />
-                            </Calendar.YearPickerTrigger>
-                            <Calendar.NavButton slot="previous" />
-                            <Calendar.NavButton slot="next" />
-                          </Calendar.Header>
-                          <Calendar.Grid>
-                            <Calendar.GridHeader>
-                              {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-                            </Calendar.GridHeader>
-                            <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
-                          </Calendar.Grid>
-                          <Calendar.YearPickerGrid>
-                            <Calendar.YearPickerGridBody>
-                              {({year}) => <Calendar.YearPickerCell year={year} />}
-                            </Calendar.YearPickerGridBody>
-                          </Calendar.YearPickerGrid>
-                        </Calendar>
-                      </DatePicker.Popover>
-                    </DatePicker>
+                    <DateButton 
+                      date={draftEvent.date || ""} 
+                      onChange={(val) => setDraftEvent({ ...draftEvent, date: val })} 
+                    />
 
                     {!draftEvent.allDay && (
-                      <>
-                        <TimeField 
-                          aria-label="Start Time"
-                          className="w-[85px] shrink-0"
-                          value={draftEvent.startTime ? parseTime(draftEvent.startTime) : null}
-                          onChange={(val) => val && setDraftEvent({ ...draftEvent, startTime: val.toString().substring(0, 5) })}
-                        >
-                          <TimeField.Group variant="secondary">
-                            <TimeField.Input>
-                              {(segment) => <TimeField.Segment segment={segment} />}
-                            </TimeField.Input>
-                          </TimeField.Group>
-                        </TimeField>
-                        <span className="text-gray-500 shrink-0">–</span>
-                        <TimeField 
-                          aria-label="End Time"
-                          className="w-[85px] shrink-0"
-                          value={draftEvent.endTime ? parseTime(draftEvent.endTime) : null}
-                          onChange={(val) => val && setDraftEvent({ ...draftEvent, endTime: val.toString().substring(0, 5) })}
-                        >
-                          <TimeField.Group variant="secondary">
-                            <TimeField.Input>
-                              {(segment) => <TimeField.Segment segment={segment} />}
-                            </TimeField.Input>
-                          </TimeField.Group>
-                        </TimeField>
-                      </>
+                      <div className="flex items-center gap-2">
+                        <CustomTimePicker 
+                          value={draftEvent.startTime || undefined}
+                          onChange={(val) => setDraftEvent({ ...draftEvent, startTime: val })}
+                          className="w-[100px]"
+                        />
+                        <span className="text-gray-500 font-bold">–</span>
+                        <CustomTimePicker 
+                          value={draftEvent.endTime || undefined}
+                          onChange={(val) => setDraftEvent({ ...draftEvent, endTime: val })}
+                          className="w-[100px]"
+                        />
+                      </div>
                     )}
                   </div>
                   
@@ -212,60 +185,17 @@ export function CreateEventPopover({ children, onSave = () => {} }: CreateEventP
                 </div>
                 <div className="flex flex-col gap-1 w-full">
                   <div className="flex items-center gap-1.5">
-                    <DatePicker 
-                      aria-label="Due Date"
-                      className="w-[125px] shrink-0" 
-                      value={draftEvent.date ? parseDate(draftEvent.date) : null}
-                      onChange={(val) => val && setDraftEvent({ ...draftEvent, date: val.toString() })}
-                    >
-                      <DateField.Group variant="secondary">
-                        <DateField.Input>
-                          {(segment) => <DateField.Segment segment={segment} />}
-                        </DateField.Input>
-                        <DateField.Suffix>
-                          <DatePicker.Trigger>
-                            <DatePicker.TriggerIndicator />
-                          </DatePicker.Trigger>
-                        </DateField.Suffix>
-                      </DateField.Group>
-                      <DatePicker.Popover>
-                        <Calendar aria-label="Due date">
-                          <Calendar.Header>
-                            <Calendar.YearPickerTrigger>
-                              <Calendar.YearPickerTriggerHeading />
-                              <Calendar.YearPickerTriggerIndicator />
-                            </Calendar.YearPickerTrigger>
-                            <Calendar.NavButton slot="previous" />
-                            <Calendar.NavButton slot="next" />
-                          </Calendar.Header>
-                          <Calendar.Grid>
-                            <Calendar.GridHeader>
-                              {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-                            </Calendar.GridHeader>
-                            <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
-                          </Calendar.Grid>
-                          <Calendar.YearPickerGrid>
-                            <Calendar.YearPickerGridBody>
-                              {({year}) => <Calendar.YearPickerCell year={year} />}
-                            </Calendar.YearPickerGridBody>
-                          </Calendar.YearPickerGrid>
-                        </Calendar>
-                      </DatePicker.Popover>
-                    </DatePicker>
+                    <DateButton 
+                      date={draftEvent.date || ""} 
+                      onChange={(val) => setDraftEvent({ ...draftEvent, date: val })} 
+                    />
 
                     {!draftEvent.allDay && (
-                      <TimeField 
-                        aria-label="Due Time"
-                        className="w-[85px] shrink-0"
-                        value={draftEvent.startTime ? parseTime(draftEvent.startTime) : null}
-                        onChange={(val) => val && setDraftEvent({ ...draftEvent, startTime: val.toString().substring(0, 5) })}
-                      >
-                        <TimeField.Group variant="secondary">
-                          <TimeField.Input>
-                            {(segment) => <TimeField.Segment segment={segment} />}
-                          </TimeField.Input>
-                        </TimeField.Group>
-                      </TimeField>
+                      <CustomTimePicker 
+                        value={draftEvent.startTime || undefined}
+                        onChange={(val) => setDraftEvent({ ...draftEvent, startTime: val })}
+                        className="w-[100px]"
+                      />
                     )}
                   </div>
                   

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import {
   ArrowRight,
@@ -13,10 +13,12 @@ import {
   ChevronDown,
   ArrowDownLeft,
   ArrowUpRight,
-  Plus
+  Plus,
+  Check
 } from "lucide-react"
+import { StoriesBar } from "@/components/home/stories-bar"
 import { toast } from "sonner"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Typography } from "@heroui/react"
 import { Radar, RadarChart, PolarGrid, ResponsiveContainer } from "recharts"
 import { RecommendedCampaignCard } from "@/components/campaign/recommended-campaign-card"
@@ -145,6 +147,7 @@ function ScoreRing({ score, scoreData }: { score: number, scoreData: Array<{ met
 
 export function HomeApp() {
   const { profile } = useProfile()
+  const router = useRouter()
   const finance = useMemo(() => getFinanceData(), [])
   const analytics = useMemo(() => getGlobalAnalyticsData("7d" as AnalyticsTimeframe), [])
 
@@ -171,6 +174,22 @@ export function HomeApp() {
   ]
   const [selectedMethodId, setSelectedMethodId] = useState(1)
   const selectedMethod = paymentMethods.find(m => m.id === selectedMethodId) || paymentMethods[0]
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isDropdownOpen])
 
   const pipelineStages = [
     { id: "bid", title: "Bid sent", dot: "bg-blue-500", text: "text-blue-600 dark:text-blue-400", bg: "bg-[#eef2f9] dark:bg-[#1a202c]", deals: PIPELINE_DEALS.filter(d => d.stage === "bid") },
@@ -197,6 +216,8 @@ export function HomeApp() {
           </p>
         </header>
 
+        <StoriesBar />
+
         <div className="mb-7 grid grid-cols-1 lg:grid-cols-4 gap-5">
           {/* MAIN SECTION (3 Cols on Left) */}
           <div className="lg:col-span-3 flex flex-col gap-5">
@@ -219,7 +240,10 @@ export function HomeApp() {
             {/* 3 Smaller Cards Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Wallet */}
-              <div className={cn(cardClass, "flex flex-col p-6")}>
+              <div 
+                onClick={() => router.push('/earnings')}
+                className={cn(cardClass, "flex flex-col p-6 cursor-pointer hover:ring-2 hover:ring-black/5 dark:hover:ring-white/10 transition-all hover:-translate-y-1")}
+              >
                 <CardHeader icon={Wallet} title="Wallet" />
                 <p className="text-[32px] font-bold leading-none tracking-tight text-[#0a0a0a] dark:text-white mt-1">{formatCurrency(finance.overview.availableWallet, finance.overview.currency)}</p>
                 <div className="mt-3 flex items-center gap-1.5 text-[13px] font-medium">
@@ -242,7 +266,7 @@ export function HomeApp() {
                     <span className="text-[13px] font-medium text-[#737373] dark:text-[#a1a1aa]">Available to withdraw</span>
                     <span className="text-[14px] font-bold text-[#0a0a0a] dark:text-white">{formatCurrency(finance.overview.availableWallet * 0.8, finance.overview.currency)}</span>
                   </div>
-                  <div className="flex flex-col relative w-full">
+                  <div ref={dropdownRef} className="flex flex-col relative w-full">
                     {/* Payment Method Chip */}
                     <div className="flex items-center justify-between px-4 pt-3.5 pb-6 rounded-t-[16px] border border-[#e4e4e7] dark:border-[#27272a] border-b-0 bg-[#fafafa] dark:bg-[#111111]/80 w-full -mb-4 relative z-0">
                       <div className="flex items-center gap-2">
@@ -253,7 +277,10 @@ export function HomeApp() {
                       </div>
                       
                       <button 
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsDropdownOpen(!isDropdownOpen)
+                        }}
                         className="text-[12px] font-semibold text-red-500 hover:text-red-600 transition-colors relative z-20"
                       >
                         Change account

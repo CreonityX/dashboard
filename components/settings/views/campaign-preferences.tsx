@@ -9,10 +9,10 @@ const DropdownSelect = ({ value, options, onChange }: any) => {
   return (
     <Dropdown placement="bottom-end">
       <Dropdown.Trigger>
-        <button className="flex items-center justify-between shrink-0 bg-transparent border border-[#e4e4e7] dark:border-[#2a2a2a] rounded-xl h-10 pl-4 pr-3 text-[14px] font-medium text-[#0a0a0a] dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer min-w-[160px]">
+        <Button disableRipple className="flex items-center justify-between shrink-0 bg-transparent border border-[#e4e4e7] dark:border-[#2a2a2a] rounded-xl h-10 pl-4 pr-3 text-[14px] font-medium text-[#0a0a0a] dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer min-w-[160px]">
           {selected.label}
           <Icon icon="gravity-ui:chevron-down" className="size-4 text-[#a1a1aa] ml-2 shrink-0" />
-        </button>
+        </Button>
       </Dropdown.Trigger>
       <Dropdown.Popover className="min-w-[160px] rounded-xl shadow-xl border border-[#efefef] dark:border-[#27272a] bg-white dark:bg-[#111111]">
         <Dropdown.Menu 

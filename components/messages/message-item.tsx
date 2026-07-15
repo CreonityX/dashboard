@@ -2,8 +2,10 @@
 
 import { useState, useRef } from "react"
 import Image from "next/image"
-import { Popover, ListBox } from "@heroui/react"
+import { Popover, PopoverTrigger, PopoverContent, ListBox, Button } from "@heroui/react"
 import { toast } from "@heroui/react"
+import { CustomCalendar } from "@/components/ui/custom-calendar"
+import { CustomTimePicker } from "@/components/ui/custom-time-picker"
 import {
   PlayFill,
   FileText,
@@ -52,25 +54,57 @@ const subText = {
 }
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
-function Bubble({ mine, children }: { mine: boolean; children: React.ReactNode }) {
+function ReplySnippet({ replyTo }: { replyTo: any }) {
+  if (!replyTo) return null
+  
+  // Decide what text to show as snippet
+  let snippet = "Attachment"
+  if (replyTo.kind === "text") snippet = replyTo.text
+  else if (replyTo.kind === "image") snippet = "Photo"
+  else if (replyTo.kind === "video") snippet = "Video"
+  else if (replyTo.kind === "file") snippet = replyTo.name
+  else if (replyTo.kind === "folder") snippet = "Folder"
+  else if (replyTo.kind === "link") snippet = replyTo.title
+  else if (replyTo.kind === "booking") snippet = "Booking Request"
+  else if (replyTo.kind === "deal") snippet = "Brand Deal"
+
   return (
-    <div className={cn("rounded-3xl px-4 py-2.5 text-[15px] leading-relaxed", mine ? bubble.mine : bubble.them)}>
+    <div className="mb-1.5 flex flex-col overflow-hidden rounded-[8px] bg-black/5 dark:bg-black/20 pl-2.5 pr-3 py-1.5 border-l-2 border-[#a1a1aa] dark:border-[#737373]">
+      <span className="text-[11px] font-bold opacity-80 leading-tight">
+        {replyTo.sender === "me" ? "You" : (replyTo.senderName || "Unknown")}
+      </span>
+      <span className="text-[12px] opacity-70 truncate leading-tight mt-0.5">
+        {snippet}
+      </span>
+    </div>
+  )
+}
+
+function Bubble({ mine, message, children }: { mine: boolean; message?: any; children: React.ReactNode }) {
+  return (
+    <div className={cn("flex flex-col rounded-3xl px-4 py-2.5 text-[15px] leading-relaxed max-w-[340px]", mine ? bubble.mine : bubble.them)}>
+      {message?.replyTo && <ReplySnippet replyTo={message.replyTo} />}
       {children}
     </div>
   )
 }
 
-function CardShell({ mine, className, children }: { mine: boolean; className?: string; children: React.ReactNode }) {
+function CardShell({ mine, message, className, children }: { mine: boolean; message?: any; className?: string; children: React.ReactNode }) {
   return (
     <div className={cn("overflow-hidden rounded-[20px] max-w-[340px]", mine ? cardShell.mine : cardShell.them, className)}>
+      {message?.replyTo && (
+        <div className="px-3 pt-3 pb-1">
+          <ReplySnippet replyTo={message.replyTo} />
+        </div>
+      )}
       {children}
     </div>
   )
 }
 
 // ─── Text ─────────────────────────────────────────────────────────────────────
-function TextBubble({ mine, text }: { mine: boolean; text: string }) {
-  return <Bubble mine={mine}>{text}</Bubble>
+function TextBubble({ mine, message }: { mine: boolean; message: any }) {
+  return <Bubble mine={mine} message={message}>{message.text}</Bubble>
 }
 
 // ─── Image / Video ────────────────────────────────────────────────────────────
@@ -185,12 +219,26 @@ function LinkCard({ mine, image, title }: { mine: boolean; image: string; title:
 }
 
 // ─── Booking ──────────────────────────────────────────────────────────────────
-function BookingCard({ mine, title, date, timeRange, status }: {
+function BookingCard({ mine, title, date, timeRange, status, onReschedule }: {
   mine: boolean; title: string; date: string; timeRange: string; status: "pending" | "confirmed"
+  onReschedule?: (newDate: string, newTime: string) => void
 }) {
   const parts = date.split(" ") // e.g. "Thu, Jun 27" → ["Thu,", "Jun", "27"]
   const month = parts[1] ?? ""
   const day = parts[2] ?? ""
+
+  const [isOpen, setIsOpen] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<any>(null)
+  const [selectedStartTime, setSelectedStartTime] = useState<any>(null)
+  const [selectedEndTime, setSelectedEndTime] = useState<any>(null)
+
+  const handleConfirm = () => {
+    if (selectedDate && selectedStartTime && selectedEndTime && onReschedule) {
+      const newTime = `${selectedStartTime.toString().substring(0, 5)}-${selectedEndTime.toString().substring(0, 5)}`
+      onReschedule(selectedDate.toString(), newTime)
+      setIsOpen(false)
+    }
+  }
 
   return (
     <CardShell mine={mine} className="w-full max-w-[320px] p-2">
@@ -225,13 +273,52 @@ function BookingCard({ mine, title, date, timeRange, status }: {
       </div>
 
       {status !== "confirmed" && (
-        <button className={cn(
-          "mt-2 flex w-full items-center justify-center gap-2 rounded-[12px] py-2 text-[12px] font-semibold transition-colors",
-          mine ? "bg-white/10 hover:bg-white/20 text-white/70 hover:text-white" : "bg-white hover:bg-[#fafafa] text-[#737373] hover:text-[#0a0a0a] dark:bg-[#3f3f46] dark:hover:bg-[#27272a] dark:text-white/60 dark:hover:text-white"
-        )}>
-          <ArrowRotateLeft className="h-3.5 w-3.5" />
-          Reschedule
-        </button>
+        <div className="w-full mt-2 flex [&>*]:flex-1 [&>*]:flex [&>*]:w-full">
+          <Popover placement="bottom" isOpen={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger>
+              <button className={cn(
+                "flex flex-1 w-full items-center justify-center gap-2 rounded-[12px] py-2 text-[12px] font-semibold transition-colors",
+                mine ? "bg-white/10 hover:bg-white/20 text-white/70 hover:text-white" : "bg-white hover:bg-[#fafafa] text-[#737373] hover:text-[#0a0a0a] dark:bg-[#3f3f46] dark:hover:bg-[#27272a] dark:text-white/60 dark:hover:text-white"
+              )}>
+                <ArrowRotateLeft className="h-3.5 w-3.5" />
+                Reschedule
+              </button>
+            </PopoverTrigger>
+          <PopoverContent className="w-[310px] p-0 border border-[#e4e4e7] dark:border-[#27272a] shadow-xl rounded-[20px] overflow-hidden">
+            <div className="flex flex-col">
+              <CustomCalendar 
+                value={selectedDate} 
+                onChange={setSelectedDate}
+              />
+              
+              <div className="px-4 pb-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <CustomTimePicker 
+                    label="Start Time"
+                    value={selectedStartTime}
+                    onChange={setSelectedStartTime}
+                    disabled={!selectedDate}
+                  />
+                  <div className="flex items-center pt-5">
+                    <span className="text-[#a1a1aa] font-bold">—</span>
+                  </div>
+                  <CustomTimePicker 
+                    label="End Time"
+                    value={selectedEndTime}
+                    onChange={setSelectedEndTime}
+                    disabled={!selectedDate}
+                  />
+                </div>
+
+                <div className="flex gap-2 w-full mt-2">
+                  <Button size="md" variant="flat" className="flex-1 font-bold rounded-[12px]" onClick={() => setIsOpen(false)}>Cancel</Button>
+                  <Button size="md" className="flex-1 font-bold rounded-[12px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white data-[disabled=true]:bg-[#f4f4f5] data-[disabled=true]:text-[#a1a1aa] dark:data-[disabled=true]:bg-[#27272a] dark:data-[disabled=true]:text-[#737373]" onClick={handleConfirm} isDisabled={!selectedDate || !selectedStartTime || !selectedEndTime}>Confirm</Button>
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+        </div>
       )}
     </CardShell>
   )
@@ -290,14 +377,24 @@ function DealCard({ mine, brand, title, budget, deliverables }: {
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
-function renderCard(message: Message, mine: boolean, onOpenMedia?: () => void) {
+function renderCard(message: Message, mine: boolean, onOpenMedia?: () => void, onReschedule?: (newDate: string, newTime: string) => void) {
   switch (message.kind) {
     case "text":
-      return <TextBubble mine={mine} text={message.text} />
+      return <TextBubble mine={mine} message={message} />
     case "image":
-      return <MediaCard mine={mine} src={message.src} caption={message.caption} isVideo={false} onOpen={onOpenMedia} />
+      return (
+        <div className="flex flex-col gap-1">
+          {message.replyTo && <div className={cn("max-w-[300px] px-1", mine ? "" : "")}><ReplySnippet replyTo={message.replyTo} /></div>}
+          <MediaCard mine={mine} src={message.src} caption={message.caption} isVideo={false} onOpen={onOpenMedia} />
+        </div>
+      )
     case "video":
-      return <MediaCard mine={mine} src={message.src} poster={message.poster} caption={message.caption} isVideo duration={message.duration} onOpen={onOpenMedia} />
+      return (
+        <div className="flex flex-col gap-1">
+          {message.replyTo && <div className={cn("max-w-[300px] px-1", mine ? "" : "")}><ReplySnippet replyTo={message.replyTo} /></div>}
+          <MediaCard mine={mine} src={message.src} poster={message.poster} caption={message.caption} isVideo duration={message.duration} onOpen={onOpenMedia} />
+        </div>
+      )
     case "file":
       return <FileCard mine={mine} name={message.name} fileType={message.fileType} size={message.size} />
     case "folder":
@@ -305,7 +402,7 @@ function renderCard(message: Message, mine: boolean, onOpenMedia?: () => void) {
     case "link":
       return <LinkCard mine={mine} image={message.image} title={message.title} />
     case "booking":
-      return <BookingCard mine={mine} title={message.title} date={message.date} timeRange={message.timeRange} status={message.status} />
+      return <BookingCard mine={mine} title={message.title} date={message.date} timeRange={message.timeRange} status={message.status} onReschedule={onReschedule} />
     case "deal":
       return <DealCard mine={mine} brand={message.brand} title={message.title} budget={message.budget} deliverables={message.deliverables} />
     default:
@@ -317,9 +414,13 @@ function renderCard(message: Message, mine: boolean, onOpenMedia?: () => void) {
 export function MessageItem({
   message,
   isGrouped = false,
+  onReply,
+  onReschedule,
 }: {
   message: Message
   isGrouped?: boolean
+  onReply?: (message: Message) => void
+  onReschedule?: (message: Message, newDate: string, newTime: string) => void
 }) {
   const mine = message.sender === "me"
   const [menuOpen, setMenuOpen] = useState(false)
@@ -358,13 +459,13 @@ export function MessageItem({
         )}
         
         <div className={cn("group/card relative flex items-center gap-1", mine ? "flex-row-reverse" : "flex-row")}>
-          <div 
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onTouchMove={handleTouchEnd}
-          >
-            {renderCard(message, mine, () => setViewerOpen(true))}
-          </div>
+            <div 
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onTouchMove={handleTouchEnd}
+            >
+              {renderCard(message, mine, () => setViewerOpen(true), (newDate, newTime) => onReschedule?.(message, newDate, newTime))}
+            </div>
           
           <Popover isOpen={menuOpen} onOpenChange={setMenuOpen} placement={mine ? "bottom-end" : "bottom-start"} offset={10}>
             <Popover.Trigger>
@@ -385,7 +486,9 @@ export function MessageItem({
                 selectionMode="none" 
                 className="w-full"
                 onAction={(key) => {
-                  if (key === "reply") toast.info("Coming Soon", { description: "Reply functionality is being built." })
+                  if (key === "reply") {
+                    if (onReply) onReply(message)
+                  }
                   else if (key === "edit") toast.info("Coming Soon", { description: "Message editing is not yet available." })
                   else if (key === "delete") toast.success("Message Deleted", { description: "The message has been removed." })
                   else if (key === "unsend") toast.success("Message Unsent", { description: "The message has been unsent." })
