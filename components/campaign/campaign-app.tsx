@@ -1264,6 +1264,11 @@ function PipelineView({ campaigns, onOpen }: { campaigns: Campaign[]; onOpen: (c
   const columns = [
     { id: "bid", label: "Bid sent" },
     { id: "negotiation", label: "Negotiation" },
+    { id: "content", label: "Content creation" },
+    { id: "accepted", label: "Brand accepted" },
+    { id: "revision", label: "Revision needed" },
+    { id: "posted", label: "Posted" },
+    { id: "completed", label: "Completed" },
   ] as const
 
   return (
