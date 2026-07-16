@@ -296,13 +296,12 @@ export function AccountView({ onBack }: { onBack?: () => void }) {
                     <Dropdown.Menu 
                       aria-label="Country codes" 
                       className="max-h-[300px] overflow-y-auto p-1"
-                      onAction={(key) => setSelectedCountryCode(key as string)}
                     >
-                      {countryCodes.map(code => (
-                        <Dropdown.Item key={code.dial_code} textValue={`${code.dial_code} ${code.name}`} className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 p-2">
+                      {COUNTRIES.map((country) => (
+                        <Dropdown.Item key={country.dial_code} onPress={() => setSelectedCountryCode(country.dial_code)} className="text-[14px] text-[#0a0a0a] dark:text-white data-[hover=true]:bg-gray-100 dark:data-[hover=true]:bg-[#27272a] rounded-lg">
                           <div className="flex items-center justify-between w-full gap-4">
-                            <span className="font-medium text-[#0a0a0a] dark:text-white">{code.dial_code}</span>
-                            <span className="text-[13px] text-[#71717a] dark:text-[#a1a1aa] truncate">{code.name}</span>
+                            <span className="font-medium text-[#0a0a0a] dark:text-white">{country.dial_code}</span>
+                            <span className="text-[13px] text-[#71717a] dark:text-[#a1a1aa] truncate">{country.name}</span>
                           </div>
                         </Dropdown.Item>
                       ))}

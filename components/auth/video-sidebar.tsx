@@ -63,7 +63,7 @@ export function VideoSidebar() {
   }
 
   return (
-    <div className="hidden lg:flex w-1/2 relative bg-black">
+    <div className="flex w-full h-full relative bg-black rounded-[24px] overflow-hidden">
       {videoNum && (
         <video 
           ref={videoRef}
@@ -95,18 +95,18 @@ export function VideoSidebar() {
         
         <div className="text-white z-10">
           <motion.h2 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            initial={{ opacity: 0, filter: "blur(12px)", y: 20 }}
+            animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+            transition={{ duration: 1, ease: "easeOut" }}
             className="text-4xl font-bold mb-4 leading-tight"
             style={{ textShadow: '0 4px 20px rgba(0,0,0,0.6)' }}
           >
             Welcome back
           </motion.h2>
           <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+            initial={{ opacity: 0, filter: "blur(12px)", y: 20 }}
+            animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+            transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
             className="text-white/95 text-lg max-w-md font-medium"
             style={{ textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}
           >
