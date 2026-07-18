@@ -9,6 +9,7 @@ import { Handset, ClockArrowRotateLeft, Calendar as CalendarIcon } from "@gravit
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAccount } from "@/context/account-context";
 
 // ─── Types ───────────────────────────────────────────────────
 interface ChatMessage {
@@ -578,6 +579,7 @@ function ContactHistoryTable() {
 // ─── Main View ────────────────────────────────────────────────
 export function ContactSupportView({ onBack }: { onBack?: () => void }) {
   const [activeTab, setActiveTab] = useState<ActivePanel>("chat");
+  const { isBrand } = useAccount();
 
   return (
     <div className={cn("flex flex-col gap-6 pb-20 pt-6", activeTab === "chat" ? "h-full overflow-hidden" : "min-h-full")}>
@@ -594,6 +596,7 @@ export function ContactSupportView({ onBack }: { onBack?: () => void }) {
           Contact Support
         </h1>
       </div>
+      {isBrand && <p className="-mt-3 text-sm text-[#71717a] dark:text-[#a1a1aa]">Our brand team can help with campaign management, creator payments, team access, brand verification, billing, and technical issues.</p>}
 
       {/* Tab Button Group */}
       <div className="flex w-full items-center justify-between gap-3 pb-2 -mb-2">

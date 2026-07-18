@@ -27,6 +27,26 @@ export type BrandData = {
 };
 
 export const MOCK_BRANDS: Record<string, BrandData> = {
+  "creonity": {
+    id: "creonity",
+    domain: "creonity.com",
+    name: "Creonity",
+    location: "Bengaluru, India",
+    bio: "The workspace where ambitious brands and creators build better campaigns together.",
+    website: "creonity.com",
+    instagram: "creonity",
+    youtube: "creonity",
+    categories: ["Creator Economy", "Marketing", "Technology"],
+    campaignsCount: 18,
+    creatorsWorkedWith: 94,
+    rating: 4.9,
+    trustMetrics: { escrowReleaseDays: 2, responseRate: 97, repeatCreatorRate: 78 },
+    team: [
+      { id: "c1", name: "Rishabh", avatarUrl: "https://i.pravatar.cc/150?u=rishabh", role: "Owner" },
+      { id: "c2", name: "Maya Shah", avatarUrl: "https://i.pravatar.cc/150?u=maya", role: "Campaign manager" },
+      { id: "c3", name: "Arjun Mehta", avatarUrl: "https://i.pravatar.cc/150?u=arjun", role: "Admin" }
+    ]
+  },
   "ubereats": {
     id: "ubereats",
     domain: "ubereats.com",

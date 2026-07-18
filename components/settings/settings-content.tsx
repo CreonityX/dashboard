@@ -11,6 +11,9 @@ import { AppearanceView } from "./views/appearance"
 import { AccountManagementView } from "./views/account-management"
 import { ConnectedAccountsView } from "./views/connected-accounts"
 import { CampaignPreferencesView } from "./views/campaign-preferences"
+import { BrandProfileView } from "./views/brand-profile"
+import { TeamView } from "./views/team"
+import { useAccount } from "@/context/account-context"
 
 // We will eventually import these from their specific view files
 const ComingSoonView = ({ title, onBack }: { title: string; onBack: () => void }) => (
@@ -33,13 +36,21 @@ interface SettingsContentProps {
 }
 
 export function SettingsContent({ activeId, onBack, onNavigate }: SettingsContentProps) {
+  const { isBrand, brand, account } = useAccount()
+  const currentMember = isBrand ? brand?.team.find(m => m.email === account?.email) : null;
+  const isAdmin = currentMember?.role === "Admin" || currentMember?.role === "Owner";
+  
   const currentActiveId = activeId || "account"
 
   return (
     <div className="h-full w-full overflow-y-auto bg-white px-5 scrollbar-none dark:bg-[#0a0a0a] sm:px-6 lg:px-8 xl:px-10">
       <div className="flex w-full flex-col items-start">
         <div className="w-full">
-          {currentActiveId === "account" ? (
+        {currentActiveId === "brand-profile" ? (
+          <BrandProfileView onBack={onBack} />
+        ) : currentActiveId === "team" ? (
+          isAdmin ? <TeamView onBack={onBack} /> : <div className="py-6"><p className="text-[#a1a1aa]">You do not have permission to view this page.</p></div>
+        ) : currentActiveId === "account" ? (
           <AccountView onBack={onBack} />
         ) : currentActiveId === "security" ? (
           <SecurityView onBack={onBack} />

@@ -2,7 +2,7 @@
 
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react"
 import { Icon } from "@iconify/react"
-import { Switch } from "@heroui/react"
+import { Switch, Dropdown } from "@heroui/react"
 import { cn } from "@/lib/utils"
 
 type SettingsPageProps = {
@@ -161,11 +161,34 @@ export function SettingsInput({ className, ...props }: InputHTMLAttributes<HTMLI
   return <input className={cn(fieldClass, className)} {...props} />
 }
 
-export function SettingsSelect({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function SettingsSelect({ className, options, value, onChange }: { className?: string, options: string[], value: string, onChange: (val: string) => void }) {
   return (
-    <select className={cn(fieldClass, "cursor-pointer appearance-auto", className)} {...props}>
-      {children}
-    </select>
+    <Dropdown placement="bottom-end">
+      <Dropdown.Trigger>
+        <button type="button" className={cn(fieldClass, "flex items-center justify-between cursor-pointer outline-none bg-transparent appearance-none", className)}>
+          {value}
+          <Icon icon="gravity-ui:chevron-down" className="size-4 text-[#a1a1aa] shrink-0 ml-2" />
+        </button>
+      </Dropdown.Trigger>
+      <Dropdown.Popover className="min-w-[160px] rounded-xl shadow-xl border border-[#efefef] dark:border-[#27272a] bg-white dark:bg-[#111111]">
+        <Dropdown.Menu
+          aria-label="Options"
+          className="p-1"
+          onAction={(key) => onChange(key as string)}
+          selectedKeys={new Set([value])}
+          selectionMode="single"
+        >
+          {options.map((opt) => (
+            <Dropdown.Item key={opt} textValue={opt} className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 p-2 data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-white/10">
+              <div className="flex items-center justify-between w-full">
+                <span className="font-medium text-[13px] text-[#0a0a0a] dark:text-white">{opt}</span>
+                {value === opt && <Icon icon="gravity-ui:check" className="size-3.5 text-[#0a0a0a] dark:text-white" />}
+              </div>
+            </Dropdown.Item>
+          ))}
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown>
   )
 }
 
@@ -235,7 +258,7 @@ export function SettingsActionButton({
         variant === "secondary" && "border border-[#e4e4e7] bg-white text-[#0a0a0a] hover:bg-[#fafafa] dark:border-[#27272a] dark:bg-[#111111] dark:text-white dark:hover:bg-[#1f1f1f]",
         variant === "ghost" && "text-[#0a0a0a] hover:bg-[#f4f4f5] dark:text-white dark:hover:bg-[#1f1f1f]",
         variant === "danger" && "bg-rose-600 text-white hover:bg-rose-700",
-        variant === "dangerSoft" && "bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/20",
+        variant === "dangerSoft" && "bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20",
         className
       )}
       {...props}

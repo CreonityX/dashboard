@@ -1,6 +1,7 @@
 import { Magnifier } from "@gravity-ui/icons"
 import { cn } from "@/lib/utils"
 import { SUPPORT_NAVIGATION } from "./support-data"
+import { useAccount } from "@/context/account-context"
 
 export function SupportSidebar({
   activeId,
@@ -9,6 +10,7 @@ export function SupportSidebar({
   activeId: string
   onSelect: (id: string) => void
 }) {
+  const { isBrand } = useAccount()
   return (
     <div className="flex h-full w-full flex-col bg-white dark:bg-[#0a0a0a] lg:w-[320px]">
       {/* Header & Search */}
@@ -17,7 +19,7 @@ export function SupportSidebar({
           onClick={() => onSelect("")} 
           className="text-left outline-none self-start hover:opacity-80 transition-opacity"
         >
-          <h1 className="text-[28px] font-bold tracking-tight text-[#0a0a0a] dark:text-white leading-none flex items-center h-[32px]">Support</h1>
+          <h1 className="text-[28px] font-bold tracking-tight text-[#0a0a0a] dark:text-white leading-none flex items-center h-[32px]">{isBrand ? "Brand Support" : "Support"}</h1>
         </button>
         <div className="relative">
           <Magnifier className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a1a1aa]" />

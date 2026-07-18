@@ -135,13 +135,13 @@ export function ProfileCard({
                       <AlertDialog.CloseTrigger />
                       <AlertDialog.Header>
                         <AlertDialog.Icon status="success" />
-                        <AlertDialog.Heading>Save changes?</AlertDialog.Heading>
+                        <AlertDialog.Heading className="text-[#0a0a0a] dark:text-white">Save changes?</AlertDialog.Heading>
                       </AlertDialog.Header>
                       <AlertDialog.Body>
                         <p className="text-gray-600 dark:text-gray-300">Are you sure you want to save these changes to your profile?</p>
                       </AlertDialog.Body>
                       <AlertDialog.Footer>
-                        <Button slot="close" variant="tertiary">
+                        <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">
                           Cancel
                         </Button>
                         <Button onPress={() => { handleSave(); toast.success("Profile updated successfully!"); renderProps.close(); }}>
@@ -227,13 +227,13 @@ export function ProfileCard({
                         <AlertDialog.CloseTrigger />
                         <AlertDialog.Header>
                           <AlertDialog.Icon status="danger" />
-                          <AlertDialog.Heading>Log out?</AlertDialog.Heading>
+                          <AlertDialog.Heading className="text-[#0a0a0a] dark:text-white">Log out?</AlertDialog.Heading>
                         </AlertDialog.Header>
                         <AlertDialog.Body>
                           <p className="text-gray-600 dark:text-gray-300">Are you sure you want to log out of your account?</p>
                         </AlertDialog.Body>
                         <AlertDialog.Footer>
-                          <Button slot="close" variant="tertiary">Cancel</Button>
+                          <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">Cancel</Button>
                           <Button variant="danger" onPress={() => { toast.success("Logged out successfully"); renderProps.close(); }}>Log out</Button>
                         </AlertDialog.Footer>
                       </>

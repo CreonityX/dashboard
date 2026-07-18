@@ -20,7 +20,7 @@ export default function BrandLayout({
       {/* Desktop Layout */}
       <div className="hidden lg:flex h-[100dvh] w-full overflow-hidden flex-col bg-white dark:bg-[#0a0a0a]">
         {/* Desktop: hover-expand icon rail + floating messages pill */}
-        <DesktopSidebar />
+        <DesktopSidebar activeId="profile" />
         <MessagesPill />
 
         {/* Page Content */}

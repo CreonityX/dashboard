@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { Accordion } from "@heroui/react";
 import { CircleDollar, FileText, CreditCard, ClockArrowRotateLeft } from "@gravity-ui/icons";
+import { useAccount } from "@/context/account-context";
 
 const PAYOUTS_FAQS = [
   { q: "When and how do I get paid?", a: "Payouts are automatically processed on the 1st and 15th of every month. You must have a minimum balance of $50 to trigger a payout. Funds are sent to your linked bank account or PayPal." },
@@ -17,8 +18,18 @@ const PURCHASES_FAQS = [
   { q: "How do refunds work?", a: "Refunds are generally not provided for digital goods or subscriptions unless there has been a billing error or unauthorized charge. Contact support within 7 days of the charge if you believe an error occurred." }
 ];
 
+const BRAND_PAYMENTS_FAQS = [
+  { q: "How do I fund a campaign?", a: "You can fund campaigns via credit card, ACH transfer, or wire transfer. Enterprise accounts may qualify for Net-30 invoicing terms." },
+  { q: "Are there platform fees for brands?", a: "We charge a standard 5% platform fee on all creator payouts. For custom enterprise contracts, please refer to your master service agreement." },
+  { q: "How are creator payments handled?", a: "We handle all creator payouts, tax compliance (1099s), and cross-border currency conversions automatically. You only need to fund the escrow." },
+  { q: "How do I add custom PO numbers to invoices?", a: "You can set a default PO number in Settings > Billing. For campaign-specific POs, you can add them during the campaign creation step." },
+  { q: "Can I get a consolidated monthly invoice?", a: "Yes, you can enable monthly consolidated billing in your Payment Settings. This rolls all campaign transactions into a single invoice issued on the 1st of the month." },
+  { q: "What if there is a dispute with a creator?", a: "If deliverables are not met, you can initiate a dispute. Funds remain in escrow while our mediation team reviews the case and determines if a refund is warranted." }
+];
+
 export function BillingView({ onBack }: { onBack?: () => void }) {
   const router = useRouter();
+  const { isBrand } = useAccount();
 
   return (
     <div className="flex flex-col gap-8 pb-20 pt-6 min-h-full animate-in fade-in duration-500">
@@ -43,8 +54,8 @@ export function BillingView({ onBack }: { onBack?: () => void }) {
             <ClockArrowRotateLeft className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h3 className="text-[15px] font-semibold text-[#0a0a0a] dark:text-white">Next Payout: 15th of the Month</h3>
-            <p className="text-[13px] text-[#737373] dark:text-[#a1a1aa] mt-1">Ensure your payment details are up to date by the 13th.</p>
+            <h3 className="text-[15px] font-semibold text-[#0a0a0a] dark:text-white">{isBrand ? "Creator payment schedule" : "Next Payout: 15th of the Month"}</h3>
+            <p className="text-[13px] text-[#737373] dark:text-[#a1a1aa] mt-1">{isBrand ? "Review payment methods and campaign invoices before creator payments are released." : "Ensure your payment details are up to date by the 13th."}</p>
           </div>
         </div>
       </div>
@@ -80,7 +91,7 @@ export function BillingView({ onBack }: { onBack?: () => void }) {
         <div className="flex flex-col gap-4">
           <h2 className="text-[18px] font-semibold text-[#0a0a0a] dark:text-white">Frequently Asked Questions</h2>
           <Accordion allowsMultipleExpanded className="w-full border-t border-[#efefef] dark:border-[#27272a]">
-            {PAYOUTS_FAQS.map((item, index) => (
+            {(isBrand ? BRAND_PAYMENTS_FAQS : [...PAYOUTS_FAQS, ...PURCHASES_FAQS]).map((item, index) => (
               <Accordion.Item key={index} className="border-b border-[#efefef] dark:border-[#27272a]">
                 <Accordion.Heading>
                   <Accordion.Trigger className="text-[15px] font-medium text-[#0a0a0a] dark:text-white py-4">

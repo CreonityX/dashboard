@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react"
 import { Icon } from "@iconify/react"
 import { Button, Dropdown } from "@heroui/react"
 import { toast } from "sonner"
+import { useAccount } from "@/context/account-context"
 import {
   SettingsActionButton,
   SettingsBadge,
@@ -93,9 +94,15 @@ function AccountModal({
 }
 
 export function AccountView({ onBack }: { onBack?: () => void }) {
+  const { account, brand, isBrand } = useAccount()
+  const currentMember = isBrand ? brand?.team.find(m => m.email === account?.email) : null;
+  const userRole = isBrand ? currentMember?.role || "Team Member" : "Creator";
+
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailStep, setEmailStep] = useState(1);
   const [newEmail, setNewEmail] = useState("");
+  const [name, setName] = useState(currentMember?.name || "Alex Rivera");
+  const [position, setPosition] = useState(isBrand ? "Marketing Head" : "Creator");
 
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
   const [phoneStep, setPhoneStep] = useState(1);
@@ -143,6 +150,27 @@ export function AccountView({ onBack }: { onBack?: () => void }) {
 
   return (
     <SettingsPage title="Account Details" onBack={onBack}>
+      <SettingsSection title="Personal Information">
+        <SettingsCard>
+          <div className="grid gap-6 md:grid-cols-2 px-2 py-1">
+            <SettingsField label="Full Name">
+              <input 
+                value={name} 
+                onChange={e => setName(e.target.value)}
+                className="mt-1 flex items-center h-10 w-full rounded-xl border border-[#e4e4e7] dark:border-[#27272a] bg-transparent px-3 text-[15px] font-medium text-[#0a0a0a] dark:text-white outline-none focus:border-[#0a0a0a] dark:focus:border-white transition-colors" 
+              />
+            </SettingsField>
+            <SettingsField label="Position in Company">
+              <input 
+                value={position} 
+                onChange={e => setPosition(e.target.value)}
+                className="mt-1 flex items-center h-10 w-full rounded-xl border border-[#e4e4e7] dark:border-[#27272a] bg-transparent px-3 text-[15px] font-medium text-[#0a0a0a] dark:text-white outline-none focus:border-[#0a0a0a] dark:focus:border-white transition-colors" 
+              />
+            </SettingsField>
+          </div>
+        </SettingsCard>
+      </SettingsSection>
+
       <SettingsSection title="Contact Information">
         <SettingsCard className="flex flex-col gap-4">
           <div className={`grid gap-4 ${!isEmailVerified ? 'lg:grid-cols-[1fr_auto_auto]' : 'lg:grid-cols-[1fr_auto]'} lg:items-end`}>
@@ -206,7 +234,7 @@ export function AccountView({ onBack }: { onBack?: () => void }) {
         <SettingsCard>
           <div className="grid gap-6 md:grid-cols-2 px-2 py-1">
             <SettingsField label="Account Type">
-              <span className="text-[15px] font-medium text-[#0a0a0a] dark:text-white mt-1">Creator</span>
+              <span className="text-[15px] font-medium text-[#0a0a0a] dark:text-white mt-1">{isBrand ? "Brand Workspace" : "Creator Workspace"}</span>
             </SettingsField>
             <SettingsField label="Account ID">
               <span className="text-[15px] font-mono text-[#71717a] mt-1">usr_8f7d9a2c3e4b1</span>

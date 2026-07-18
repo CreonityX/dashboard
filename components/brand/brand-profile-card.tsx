@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Button, ScrollShadow, Typography } from "@heroui/react";
-import { BrandData } from "@/components/brand/brand-data";
+import { Button, ScrollShadow, Typography, AlertDialog } from "@heroui/react";
+import { toast } from "sonner";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { 
   SealCheck, 
@@ -18,19 +18,31 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldCheck,
-  PersonCheck
+  Check
 } from "@gravity-ui/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXTwitter, faInstagram, faYoutube } from "@fortawesome/free-brands-svg-icons";
-import { ChevronLeft as ChevronLeftLucide } from "lucide-react";
+import type { BrandData } from "@/components/brand/brand-data";
+import { BrandEditorForm } from "@/components/brand/brand-editor-form";
 
 export function BrandProfileCard({ 
   brand,
+  isOwner = false,
+  onUpdate,
 }: { 
   brand: BrandData
+  isOwner?: boolean
+  onUpdate?: (updates: Partial<BrandData>) => void
 }) {
   const router = useRouter();
   const [isTeamExpanded, setIsTeamExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(brand);
+
+  const saveProfile = () => {
+    onUpdate?.({ ...draft, categories: draft.categories.filter(Boolean) });
+    setIsEditing(false);
+  };
 
   // Simple determinism for banner gradient based on brand name length or ID
   const hash = brand.id.length * 10;
@@ -38,6 +50,48 @@ export function BrandProfileCard({
 
   return (
     <div className="relative flex w-full flex-col overflow-hidden bg-white lg:h-full lg:rounded-2xl lg:border lg:border-gray-200/70 lg:shadow-sm dark:bg-[#0a0a0a] dark:lg:border-white/10">
+      {isEditing && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0a0a0a] shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsEditing(false)} className="text-gray-900 dark:text-white">
+              <ChevronLeft width={24} height={24} />
+            </button>
+            <Typography type="h6" className="text-[#0a0a0a] dark:text-white leading-none font-semibold">Edit brand profile</Typography>
+          </div>
+          <AlertDialog>
+            <AlertDialog.Trigger className="text-[#0060ff] dark:text-[#4d90fe] font-semibold text-sm flex items-center justify-center cursor-pointer outline-none">
+              <Check width={22} height={22} />
+            </AlertDialog.Trigger>
+            <AlertDialog.Backdrop>
+              <AlertDialog.Container>
+                <AlertDialog.Dialog className="sm:max-w-[400px]">
+                  {(renderProps: any) => (
+                    <>
+                      <AlertDialog.CloseTrigger />
+                      <AlertDialog.Header>
+                        <AlertDialog.Icon status="success" />
+                        <AlertDialog.Heading className="text-[#0a0a0a] dark:text-white">Save changes?</AlertDialog.Heading>
+                      </AlertDialog.Header>
+                      <AlertDialog.Body>
+                        <p className="text-gray-600 dark:text-gray-300">Are you sure you want to save these changes to your brand profile?</p>
+                      </AlertDialog.Body>
+                      <AlertDialog.Footer>
+                        <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">
+                          Cancel
+                        </Button>
+                        <Button onPress={() => { saveProfile(); toast.success("Brand profile updated successfully!"); renderProps.close(); }}>
+                          Save changes
+                        </Button>
+                      </AlertDialog.Footer>
+                    </>
+                  )}
+                </AlertDialog.Dialog>
+              </AlertDialog.Container>
+            </AlertDialog.Backdrop>
+          </AlertDialog>
+        </div>
+      )}
+      
       <ScrollShadow hideScrollBar size={60} className="h-full w-full flex-1 pb-2 lg:pb-6">
         
         {/* Mobile back button */}
@@ -61,9 +115,9 @@ export function BrandProfileCard({
           
           <div className="relative h-10 w-full shrink-0">
             <div className="absolute -top-12 left-6">
-              <div className="group relative rounded-2xl">
+              <div className="group relative rounded-full">
                 <div
-                  className="h-[76px] w-[76px] overflow-hidden rounded-2xl bg-white shadow-sm ring-4 ring-white dark:ring-[#0a0a0a] flex items-center justify-center relative"
+                  className="h-[76px] w-[76px] overflow-hidden rounded-full bg-white shadow-sm ring-4 ring-white dark:ring-[#0a0a0a] flex items-center justify-center relative"
                 >
                   <BrandLogo domain={brand.domain} name={brand.name} className="absolute inset-0 h-full w-full object-cover" />
                 </div>
@@ -75,7 +129,11 @@ export function BrandProfileCard({
           </div>
         </div>
 
-        {/* Identity */}
+        {isEditing ? (
+          <BrandEditorForm value={draft as BrandData} onChange={(val) => setDraft(val as BrandData)} />
+        ) : (
+          <>
+            {/* Identity */}
         <div className="px-6 mt-4 flex flex-col gap-0.5">
           <Typography type="h4" className="text-[#0a0a0a] dark:text-white leading-none font-bold">
             {brand.name}
@@ -100,18 +158,13 @@ export function BrandProfileCard({
 
         {/* Main Buttons */}
         <div className="px-6 mt-6 flex items-center gap-3">
-          <Button 
-            className="h-[40px] bg-[#0060ff] dark:bg-[#0060ff] text-white font-semibold text-[14px] rounded-xl flex-1 hover:opacity-90 transition-opacity"
-          >
-            View Open Campaigns
-          </Button>
-          <Button 
-            variant="outline"
-            className="h-[40px] bg-transparent border-[1.5px] border-gray-200 dark:border-gray-800 text-[#0a0a0a] dark:text-white font-semibold text-[14px] rounded-xl flex-1 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-          >
-            <Comment className="w-4 h-4 mr-1" />
-            Message
-          </Button>
+          {isOwner ? <>
+            <Button onPress={() => { setDraft(brand); setIsEditing(true) }} className="h-[40px] bg-[#0060ff] text-white font-semibold text-[14px] rounded-xl flex-1">Edit profile</Button>
+            <Button variant="outline" onPress={() => router.push("/settings/team")} className="h-[40px] border-[1.5px] border-gray-200 dark:border-gray-800 text-[#0a0a0a] dark:text-white font-semibold text-[14px] rounded-xl flex-1">Manage team</Button>
+          </> : <>
+            <Button className="h-[40px] bg-[#0060ff] dark:bg-[#0060ff] text-white font-semibold text-[14px] rounded-xl flex-1 hover:opacity-90 transition-opacity">View Open Campaigns</Button>
+            <Button variant="outline" className="h-[40px] bg-transparent border-[1.5px] border-gray-200 dark:border-gray-800 text-[#0a0a0a] dark:text-white font-semibold text-[14px] rounded-xl flex-1 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"><Comment className="w-4 h-4 mr-1" />Message</Button>
+          </>}
         </div>
 
         {/* Separator */}
@@ -278,6 +331,8 @@ export function BrandProfileCard({
             </a>
           )}
         </div>
+        </>
+        )}
       </ScrollShadow>
     </div>
   );

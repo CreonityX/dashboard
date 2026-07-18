@@ -1,6 +1,7 @@
 import React from "react";
 import { Accordion } from "@heroui/react";
 import { cn } from "@/lib/utils";
+import { useAccount } from "@/context/account-context";
 
 const FAQ_SECTIONS = [
   {
@@ -34,7 +35,41 @@ const FAQ_SECTIONS = [
   }
 ];
 
+const BRAND_FAQ_SECTIONS = [
+  {
+    title: "Campaign Management",
+    items: [
+      { q: "How do I launch a new creator campaign?", a: "To launch a campaign, navigate to your Campaigns dashboard and click 'New Campaign'. You'll need to define your budget, target audience, and deliverables before inviting creators." },
+      { q: "Can I manage multiple brands under one account?", a: "Yes, agency and enterprise users can manage multiple brand workspaces. You can switch between them using the workspace selector in the top-left navigation." }
+    ]
+  },
+  {
+    title: "Creator Partnerships",
+    items: [
+      { q: "How are creators vetted on the platform?", a: "All creators go through a rigorous vetting process involving identity verification, audience authenticity checks, and content quality reviews before they can accept campaign offers." },
+      { q: "What happens if a creator misses a deadline?", a: "If a creator fails to meet the agreed-upon deadline, the escrowed funds are automatically returned to your account balance, and the creator's platform standing is penalized." }
+    ]
+  },
+  {
+    title: "Billing & Invoices",
+    items: [
+      { q: "How do I download monthly invoices?", a: "You can download consolidated monthly invoices from Settings > Billing & Payments. Enterprise customers can also set up automatic email forwarding to their finance team." },
+      { q: "How does the creator escrow system work?", a: "When you hire a creator, the funds are held in a secure escrow account. They are only released to the creator once you approve the final deliverables or after a 7-day auto-approval window." }
+    ]
+  },
+  {
+    title: "Team & Access",
+    items: [
+      { q: "How do I invite team members?", a: "Go to Settings > Team and click 'Invite'. You can assign different roles such as Admin, Campaign Manager, or Viewer depending on the access level required." },
+      { q: "Is Single Sign-On (SSO) supported?", a: "Yes, SAML-based SSO is available for Enterprise plans. Please contact your dedicated account manager to configure Okta, Azure AD, or Google Workspace integration." }
+    ]
+  }
+];
+
 export function FaqView({ onBack }: { onBack?: () => void }) {
+  const { isBrand } = useAccount();
+  const sections = isBrand ? BRAND_FAQ_SECTIONS : FAQ_SECTIONS;
+  
   return (
     <div className="flex flex-col gap-6 pb-20 pt-6 min-h-full">
       {/* Header */}
@@ -52,7 +87,7 @@ export function FaqView({ onBack }: { onBack?: () => void }) {
       </div>
 
       <div className="flex flex-col gap-10 mt-2">
-        {FAQ_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.title} className="flex flex-col gap-4">
             <h2 className="text-[18px] font-semibold text-[#0a0a0a] dark:text-white">{section.title}</h2>
             <Accordion allowsMultipleExpanded className="w-full">

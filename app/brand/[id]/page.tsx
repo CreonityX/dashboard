@@ -4,12 +4,15 @@ import { useParams, notFound } from "next/navigation"
 import { BrandProfileCard } from "@/components/brand/brand-profile-card"
 import { BrandCampaignGrid } from "@/components/brand/brand-campaign-grid"
 import { MOCK_BRANDS } from "@/components/brand/brand-data"
+import { useAccount } from "@/context/account-context"
 
 export default function BrandProfilePage() {
   const params = useParams()
   const id = params.id as string
+  const { account, brand: activeBrand, updateBrand } = useAccount()
 
-  const brand = MOCK_BRANDS[id]
+  const brand = id === "creonity" && activeBrand ? activeBrand : MOCK_BRANDS[id]
+  const isOwner = account?.role === "brand" && account.brandId === id
   
   if (!brand) {
     notFound()
@@ -22,7 +25,7 @@ export default function BrandProfilePage() {
         {/* Left Column: Brand Profile Card */}
         <div className="w-full lg:w-[415px] shrink-0 flex flex-col h-auto lg:h-full lg:pb-4">
           <div className="px-0 pt-0 lg:px-0 lg:pt-0 lg:h-full">
-            <BrandProfileCard brand={brand} />
+            <BrandProfileCard brand={brand} isOwner={isOwner} onUpdate={updateBrand} />
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import { Magnifier } from "@gravity-ui/icons"
 import { cn } from "@/lib/utils"
-import { SETTINGS_NAVIGATION } from "./settings-data"
+import { BRAND_SETTINGS_NAVIGATION, SETTINGS_NAVIGATION } from "./settings-data"
+import { useAccount } from "@/context/account-context"
 
 interface SettingsSidebarProps {
   activeId: string
@@ -8,6 +9,19 @@ interface SettingsSidebarProps {
 }
 
 export function SettingsSidebar({ activeId, onSelect }: SettingsSidebarProps) {
+  const { isBrand, account, brand } = useAccount()
+  const currentMember = isBrand ? brand?.team.find(m => m.email === account?.email) : null;
+  const isAdmin = currentMember?.role === "Admin" || currentMember?.role === "Owner";
+
+  const baseNavigation = isBrand ? BRAND_SETTINGS_NAVIGATION : SETTINGS_NAVIGATION;
+  const navigation = baseNavigation.map(group => ({
+    ...group,
+    items: group.items.filter(item => {
+      if (item.id === "team" && !isAdmin) return false;
+      return true;
+    })
+  })).filter(group => group.items.length > 0);
+
   // If activeId is empty, it means we are at the root /settings, which will default to 'account' view
   // So we highlight 'account' if activeId is empty
   const currentActiveId = activeId || "account"
@@ -32,7 +46,7 @@ export function SettingsSidebar({ activeId, onSelect }: SettingsSidebarProps) {
 
       {/* Navigation Groups */}
       <div className="flex-1 px-4 py-2 pb-6 overflow-y-auto custom-scrollbar">
-        {SETTINGS_NAVIGATION.map((group, i) => (
+        {navigation.map((group, i) => (
           <div key={group.title} className={cn("mb-6", i === 0 && "mt-2")}>
             <h2 className="mb-2.5 px-3 text-[14px] font-semibold text-[#0a0a0a] dark:text-white capitalize">
               {group.title}

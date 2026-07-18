@@ -1,6 +1,7 @@
 import React from "react"; 
 import { Accordion } from "@heroui/react";
 import { Lock, ShieldCheck, Key, Shield } from "@gravity-ui/icons";
+import { useAccount } from "@/context/account-context";
 
 const ACCOUNT_FAQS = [
   { q: "How do I change my password?", a: "To change your password, navigate to the General Settings page via the bottom left gear icon, and look for the 'Security' section. From there, you can choose a new password." },
@@ -9,7 +10,15 @@ const ACCOUNT_FAQS = [
   { q: "How do I permanently delete my account?", a: "To permanently delete your account and all associated data, please go to Settings > Data Privacy and select 'Delete Account'. This action is irreversible after the 30-day grace period." }
 ];
 
+const BRAND_ACCOUNT_FAQS = [
+  { q: "How do I manage team member permissions?", a: "Go to Settings > Team. As an Owner or Admin, you can change roles, revoke access, or require 2FA for all team members." },
+  { q: "Can we enforce SSO for our organization?", a: "Yes, Enterprise brands can enforce SAML SSO login for all team members. Once enabled, password login will be disabled for your domain." },
+  { q: "What happens when an employee leaves?", a: "When you remove a team member, they immediately lose access to the brand workspace, active campaigns, and billing data. Any active campaigns they were managing will be reassigned to the brand owner." },
+  { q: "How do I view the audit log?", a: "Admins can download a 90-day compliance audit log containing login events, permission changes, and financial exports from the Security dashboard." }
+];
+
 export function AccountSecurityView({ onBack }: { onBack?: () => void }) {
+  const { isBrand } = useAccount();
   return (
     <div className="flex flex-col gap-8 pb-20 pt-6 min-h-full animate-in fade-in duration-500">
       {/* Header */}
@@ -31,9 +40,9 @@ export function AccountSecurityView({ onBack }: { onBack?: () => void }) {
       {/* Quick Help Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { title: "Recover Account", icon: ShieldCheck, desc: "Lost access? Follow our recovery guide." },
+          { title: isBrand ? "Recover workspace" : "Recover Account", icon: ShieldCheck, desc: "Lost access? Follow our recovery guide." },
           { title: "2FA Setup", icon: Key, desc: "Step-by-step guide to secure your login." },
-          { title: "Suspicious Activity", icon: Shield, desc: "Report unauthorized access attempts." }
+          { title: isBrand ? "Team access issue" : "Suspicious Activity", icon: Shield, desc: isBrand ? "Get help with member permissions or access." : "Report unauthorized access attempts." }
         ].map((card, i) => {
           const Icon = card.icon;
           return (
@@ -54,7 +63,7 @@ export function AccountSecurityView({ onBack }: { onBack?: () => void }) {
       <div className="flex flex-col gap-4 mt-4">
         <h2 className="text-[18px] font-semibold text-[#0a0a0a] dark:text-white">Frequently Asked Questions</h2>
         <Accordion allowsMultipleExpanded className="w-full">
-          {ACCOUNT_FAQS.map((item, index) => (
+          {(isBrand ? BRAND_ACCOUNT_FAQS : ACCOUNT_FAQS).map((item, index) => (
             <Accordion.Item key={index}>
               <Accordion.Heading>
                 <Accordion.Trigger className="text-[15px] font-medium text-[#0a0a0a] dark:text-white py-4">

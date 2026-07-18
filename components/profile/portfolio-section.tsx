@@ -466,7 +466,7 @@ export function PortfolioSection({
             <AlertDialog.Dialog className="sm:max-w-[400px]">
               <AlertDialog.CloseTrigger />
               <AlertDialog.Header>
-                <AlertDialog.Heading>Organize your portfolio</AlertDialog.Heading>
+                <AlertDialog.Heading className="text-[#0a0a0a] dark:text-white">Organize your portfolio</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
                 <p className="text-gray-600 dark:text-gray-300 text-[14px]">
@@ -484,9 +484,8 @@ export function PortfolioSection({
                 </label>
               </AlertDialog.Body>
               <AlertDialog.Footer>
-                <Button variant="solid" className="bg-black text-white dark:bg-white dark:text-black w-full" onPress={handleDismissTutorial}>
-                  Got it
-                </Button>
+                <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">Cancel</Button>
+                <Button onPress={handleDismissTutorial}>Got it</Button>
               </AlertDialog.Footer>
             </AlertDialog.Dialog>
           </AlertDialog.Container>

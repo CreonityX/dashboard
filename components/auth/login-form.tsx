@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faGoogle, faMeta, faApple } from "@fortawesome/free-brands-svg-icons"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
 import { Icon } from "@iconify/react"
+import { useAccount } from "@/context/account-context"
 
 function OTPInput({ length = 6 }: { length?: number }) {
   return (
@@ -42,6 +43,7 @@ const countryCodes = [
 
 export function LoginForm() {
   const router = useRouter()
+  const { signIn } = useAccount()
   const { setTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,18 +58,18 @@ export function LoginForm() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showReenterPassword, setShowReenterPassword] = useState(false)
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleLoginSubmit = (formData: FormData) => {
     setIsLoading(true)
     setError(null)
     
-    const formData = new FormData(e.currentTarget)
     const email = formData.get("email")
     const password = formData.get("password")
 
     setTimeout(() => {
       setIsLoading(false)
-      if (email === "test@creonity.com" && password === "Test1234") {
+      if ((email === "test@creonity.com" || email === "creator@creonity.com" || email === "brand@creonity.com") && password === "Test1234") {
+        const isBrand = email === "brand@creonity.com"
+        signIn(isBrand ? { role: "brand", brandId: "creonity", email: String(email) } : { role: "creator", email: String(email) })
         toast.success("Login Successful", {
           description: `Welcome back, ${email}!`
         })
@@ -125,11 +127,15 @@ export function LoginForm() {
 
       <form className="flex flex-col gap-5 w-full" onSubmit={(e) => {
         e.preventDefault()
+        if (authMode === "login") {
+          handleLoginSubmit(new FormData(e.currentTarget))
+          return
+        }
+        
         setIsLoading(true)
         setTimeout(() => {
           setIsLoading(false)
-          if (authMode === "login") onSubmit(e)
-          else if (authMode === "forgot_email") setAuthMode("forgot_otp")
+          if (authMode === "forgot_email") setAuthMode("forgot_otp")
           else if (authMode === "forgot_otp") setAuthMode("forgot_success_options")
           else if (authMode === "mobile_login") setAuthMode("mobile_otp")
           else if (authMode === "mobile_otp") {
@@ -340,12 +346,16 @@ export function LoginForm() {
         )}
 
         {authMode !== "forgot_success_options" && (
-          <Button type="submit" isLoading={isLoading} className="w-full h-12 bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] font-bold rounded-[14px]">
-            {authMode === "login" ? "Sign In" : 
-             authMode === "forgot_email" || authMode === "mobile_login" ? "Send Code" : 
-             authMode === "forgot_otp" || authMode === "mobile_otp" ? "Verify Code" : 
-             "Reset Password"}
-          </Button>
+          <button type="submit" disabled={isLoading} className="w-full flex items-center justify-center h-12 bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] font-bold rounded-[14px] hover:opacity-90 transition-opacity disabled:opacity-50">
+            {isLoading ? (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              authMode === "login" ? "Sign In" : 
+              authMode === "forgot_email" || authMode === "mobile_login" ? "Send Code" : 
+              authMode === "forgot_otp" || authMode === "mobile_otp" ? "Verify Code" : 
+              "Reset Password"
+            )}
+          </button>
         )}
         
         {error && <p className="text-[13px] font-medium text-rose-500 text-center mt-2">{error}</p>}

@@ -5,6 +5,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['@videojs/react'],
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -17,3 +18,5 @@ const nextConfig = {
 }
 
 export default nextConfig
+
+import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());

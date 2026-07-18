@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils"
 import { primaryItems, type MenuItem } from "@/components/menu-data"
 import { ProfileSphere } from "@/components/profile-sphere"
+import { useAccount } from "@/context/account-context"
 
 import { toast } from "@heroui/react"
 import { conversations } from "@/lib/messages-data"
@@ -94,6 +95,7 @@ function Row({
 }
 
 export function DesktopSidebar({ activeId: propActiveId }: { activeId?: string }) {
+  const { account, brand, signOut } = useAccount()
   const pathname = usePathname()
   
   let activeId = propActiveId
@@ -157,7 +159,7 @@ export function DesktopSidebar({ activeId: propActiveId }: { activeId?: string }
 
           {/* Profile */}
           <Link
-            href="/profile"
+            href={account?.role === "brand" ? `/brand/${account.brandId}` : "/profile"}
             onClick={() => {
               setIsNotificationsOpen(false)
               setIsMoreOpen(false)
@@ -165,14 +167,14 @@ export function DesktopSidebar({ activeId: propActiveId }: { activeId?: string }
             className="flex w-full items-center text-[#0a0a0a] dark:text-white"
           >
             <span className="flex shrink-0 items-center justify-center" style={{ width: RAIL_W }}>
-              <div className={cn("h-7 w-7 transition-transform rounded-full", activeId === "profile" && "scale-[1.06] ring-2 ring-offset-[0.5px] ring-black dark:ring-white ring-offset-white dark:ring-offset-[#0a0a0a]")}>
-                <ProfileSphere className="h-full w-full block" />
+              <div className={cn("h-7 w-7 transition-transform rounded-full overflow-hidden", activeId === "profile" && "scale-[1.06] ring-2 ring-offset-[0.5px] ring-black dark:ring-white ring-offset-white dark:ring-offset-[#0a0a0a]")}>
+                {brand ? <div className="flex h-full w-full items-center justify-center rounded-full bg-[#0060ff] text-[10px] font-bold text-white">{brand.name.slice(0, 1)}</div> : <ProfileSphere className="h-full w-full block" />}
               </div>
             </span>
             <Typography
               type="h3"
               className={cn(
-                "whitespace-nowrap leading-none",
+                "whitespace-nowrap leading-none text-[#0a0a0a] dark:text-white",
                 activeId === "profile" ? "font-bold" : "font-medium",
               )}
             >
@@ -256,14 +258,14 @@ export function DesktopSidebar({ activeId: propActiveId }: { activeId?: string }
                       <AlertDialog.CloseTrigger />
                       <AlertDialog.Header>
                         <AlertDialog.Icon status="danger" />
-                        <AlertDialog.Heading>Log out?</AlertDialog.Heading>
+                        <AlertDialog.Heading className="text-[#0a0a0a] dark:text-white">Log out?</AlertDialog.Heading>
                       </AlertDialog.Header>
                       <AlertDialog.Body>
                         <p className="text-gray-600 dark:text-gray-300">Are you sure you want to log out of your account?</p>
                       </AlertDialog.Body>
                       <AlertDialog.Footer>
-                        <Button slot="close" variant="tertiary">Cancel</Button>
-                        <Button variant="danger" onPress={() => { toast.success("Logged out successfully"); renderProps.close(); }}>Log out</Button>
+                        <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">Cancel</Button>
+                        <Button variant="danger" onPress={() => { signOut(); toast.success("Logged out successfully"); router.push("/login"); renderProps.close(); }}>Log out</Button>
                       </AlertDialog.Footer>
                     </>
                   )}

@@ -185,13 +185,13 @@ function OrganizationSearch({ value, onChange }: { value?: Organization; onChang
                         <AlertDialog.CloseTrigger />
                         <AlertDialog.Header>
                           <AlertDialog.Icon status="danger" />
-                          <AlertDialog.Heading>Remove agency?</AlertDialog.Heading>
+                          <AlertDialog.Heading className="text-[#0a0a0a] dark:text-white">Remove agency?</AlertDialog.Heading>
                         </AlertDialog.Header>
                         <AlertDialog.Body>
                           <p className="text-gray-600 dark:text-gray-300">Are you sure you want to remove {value.name} from your profile?</p>
                         </AlertDialog.Body>
                         <AlertDialog.Footer>
-                          <Button slot="close" variant="tertiary">Cancel</Button>
+                          <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">Cancel</Button>
                           <Button variant="danger" onPress={() => { onChange(undefined); toast.error("Agency removed"); renderProps.close(); }}>Remove</Button>
                         </AlertDialog.Footer>
                       </>
@@ -265,13 +265,13 @@ function BrandCollaborationsEditor({ experience, onChange }: { experience: Exper
                             <AlertDialog.CloseTrigger />
                             <AlertDialog.Header>
                               <AlertDialog.Icon status="danger" />
-                              <AlertDialog.Heading>Remove brand collaboration?</AlertDialog.Heading>
+                              <AlertDialog.Heading className="text-[#0a0a0a] dark:text-white">Remove brand collaboration?</AlertDialog.Heading>
                             </AlertDialog.Header>
                             <AlertDialog.Body>
                               <p className="text-gray-600 dark:text-gray-300">Are you sure you want to remove your collaboration with {item.company}?</p>
                             </AlertDialog.Body>
                             <AlertDialog.Footer>
-                              <Button slot="close" variant="tertiary">Cancel</Button>
+                              <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">Cancel</Button>
                               <Button variant="danger" onPress={() => { onChange(experience.filter((entry) => entry.id !== item.id)); toast.error("Brand removed"); renderProps.close(); }}>Remove</Button>
                             </AlertDialog.Footer>
                           </>

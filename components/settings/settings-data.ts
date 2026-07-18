@@ -75,3 +75,20 @@ export const SETTINGS_NAVIGATION: SettingsGroup[] = [
     ]
   }
 ]
+
+export const BRAND_SETTINGS_NAVIGATION: SettingsGroup[] = [
+  { title: "Brand", items: [
+    { id: "account", label: "Your Account", icon: Person },
+    { id: "brand-profile", label: "Brand Profile", icon: Globe },
+    { id: "team", label: "Team", icon: Puzzle },
+  ] },
+  { title: "Campaigns", items: [{ id: "campaign-preferences", label: "Campaign Preferences", icon: Megaphone }] },
+  { title: "Billing", items: [{ id: "subscription", label: "Billing & Payments", icon: Receipt }] },
+  { title: "App Settings", items: [
+    { id: "security", label: "Security", icon: ShieldCheck },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "privacy", label: "Privacy & Data", icon: Lock },
+    { id: "appearance", label: "Appearance", icon: Sun },
+  ] },
+  { title: "Danger Zone", items: [{ id: "account-management", label: "Account Management", icon: TrashBin, isDanger: true }] },
+]

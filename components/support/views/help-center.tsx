@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react"
 import { Button } from "@heroui/react"
 import { cn } from "@/lib/utils"
 import { Magnifier, FileText, ClockArrowRotateLeft, Rocket, Lock, CircleDollar, Play, CircleQuestion } from "@gravity-ui/icons"
+import { useAccount } from "@/context/account-context"
 
 const SHORTCUTS = [
   { id: "getting-started", title: "Getting Started", desc: "Learn the basics and set up your profile.", icon: Rocket },
@@ -15,6 +16,13 @@ const SHORTCUTS = [
 ]
 
 export function HelpCenterView({ onBack, onNavigate }: { onBack?: () => void, onNavigate?: (id: string) => void }) {
+  const { isBrand, brand } = useAccount()
+  const shortcuts = isBrand ? [
+    { id: "getting-started", title: "Brand campaigns", desc: "Set up campaigns and collaborate with creators.", icon: Rocket },
+    { id: "account-security", title: "Team access", desc: "Manage workspace access and security.", icon: Lock },
+    { id: "billing", title: "Creator payments", desc: "Understand invoices, escrow, and payments.", icon: CircleDollar },
+    ...SHORTCUTS.slice(3),
+  ] : SHORTCUTS
   return (
     <div className="mx-auto max-w-5xl pt-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
@@ -29,6 +37,7 @@ export function HelpCenterView({ onBack, onNavigate }: { onBack?: () => void, on
           <h1 className="text-[28px] font-bold tracking-tight text-[#0a0a0a] dark:text-white leading-none flex items-center h-[32px]">Help Center</h1>
         </div>
       </div>
+      {isBrand && <div className="mb-8 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-500/25 dark:bg-blue-950/20 dark:text-blue-100">Support for <strong>{brand?.name}</strong>: campaign management, creator payments, team access, verification, billing, and technical issues.</div>}
       
       {/* SEARCH BAR & HISTORY BUTTON */}
       <div className="mb-10 flex flex-col sm:flex-row items-center gap-4 w-full">
@@ -56,7 +65,7 @@ export function HelpCenterView({ onBack, onNavigate }: { onBack?: () => void, on
       {/* SHORTCUTS GRID */}
       <h3 className="text-[18px] font-bold tracking-tight text-[#0a0a0a] dark:text-white mb-6">Popular Topics</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {SHORTCUTS.map((item) => (
+        {shortcuts.map((item) => (
           <button
             key={item.id}
             onClick={() => onNavigate && onNavigate(item.id)}
