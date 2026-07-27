@@ -6,6 +6,34 @@ import type { ReactNode } from "react"
 import { Switch, Button, Dropdown } from "@heroui/react"
 import { toast } from "sonner"
 
+export function BlueSwitch({ 
+  defaultSelected, 
+  isSelected, 
+  onChange 
+}: { 
+  defaultSelected?: boolean
+  isSelected?: boolean
+  onChange?: (value: boolean) => void
+}) {
+  return (
+    <Switch 
+      defaultSelected={defaultSelected} 
+      isSelected={isSelected} 
+      onChange={onChange}
+      aria-label="Toggle"
+      className="pointer-events-none"
+    >
+      {({isSelected: selected}) => (
+        <Switch.Content>
+          <Switch.Control className={selected ? "!bg-[#006FEE]" : ""}>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch.Content>
+      )}
+    </Switch>
+  )
+}
+
 const countryCodes = [
   { name: "United States", dial_code: "+1" },
   { name: "Canada", dial_code: "+1" },
@@ -236,13 +264,9 @@ export function SecurityView({ onBack }: { onBack?: () => void }) {
                 <span className="text-[13px] text-[#52525b] dark:text-[#a1a1aa]">{isAuthEnabled ? "Configured and active" : "Not configured"}</span>
               </div>
               <div className="shrink-0 ml-4 pointer-events-none">
-                <Switch 
+                <BlueSwitch 
                   isSelected={isAuthEnabled}
-                  color="success" 
-                  size="sm"
-                >
-                  <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control></Switch.Content>
-                </Switch>
+                />
               </div>
             </div>
 
@@ -258,13 +282,9 @@ export function SecurityView({ onBack }: { onBack?: () => void }) {
                 <span className="text-[13px] text-[#52525b] dark:text-[#a1a1aa]">{isSMSEnabled ? "Configured and active" : "Receive a one-time code via SMS."}</span>
               </div>
               <div className="shrink-0 ml-4 pointer-events-none">
-                <Switch 
+                <BlueSwitch 
                   isSelected={isSMSEnabled}
-                  color="success" 
-                  size="sm"
-                >
-                  <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control></Switch.Content>
-                </Switch>
+                />
               </div>
             </div>
           </div>

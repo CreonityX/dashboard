@@ -58,19 +58,33 @@ export function BrandCampaignGrid({ domain }: { domain: string }) {
 
       <div className="h-full overflow-y-auto px-4 lg:px-0 pb-20 lg:pb-0">
         {activeTab === "Open Campaigns" && (
-          <div className="pt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {openCampaigns.map((campaign) => (
-              <RecommendedCampaignCard key={campaign.id} campaign={campaign} />
-            ))}
-          </div>
+          openCampaigns.length > 0 ? (
+            <div className="pt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {openCampaigns.map((campaign) => (
+                <RecommendedCampaignCard key={campaign.id} campaign={campaign} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full pt-32 px-4 text-center">
+              <h3 className="text-[17px] font-bold text-[#0a0a0a] dark:text-white">No open campaigns</h3>
+              <p className="text-[14px] text-gray-500 mt-2 max-w-[300px]">This brand doesn't have any active campaigns at the moment. Check back later!</p>
+            </div>
+          )
         )}
 
         {activeTab === "Completed" && (
-          <div className="pt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {completedCampaigns.map((campaign) => (
-              <RecommendedCampaignCard key={campaign.id} campaign={campaign} />
-            ))}
-          </div>
+          completedCampaigns.length > 0 ? (
+            <div className="pt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {completedCampaigns.map((campaign) => (
+                <RecommendedCampaignCard key={campaign.id} campaign={campaign} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full pt-32 px-4 text-center">
+              <h3 className="text-[17px] font-bold text-[#0a0a0a] dark:text-white">No completed campaigns</h3>
+              <p className="text-[14px] text-gray-500 mt-2 max-w-[300px]">There are no past campaigns to display yet.</p>
+            </div>
+          )
         )}
 
         {activeTab === "Creator Work" && (

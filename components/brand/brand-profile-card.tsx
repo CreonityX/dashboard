@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button, ScrollShadow, Typography, AlertDialog } from "@heroui/react";
@@ -18,7 +18,9 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldCheck,
-  Check
+  Check,
+  Picture,
+  PersonPencil
 } from "@gravity-ui/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXTwitter, faInstagram, faYoutube } from "@fortawesome/free-brands-svg-icons";
@@ -38,6 +40,20 @@ export function BrandProfileCard({
   const [isTeamExpanded, setIsTeamExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(brand);
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, field: "coverImage" | "avatar") => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDraft({ ...draft, [field]: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const saveProfile = () => {
     onUpdate?.({ ...draft, categories: draft.categories.filter(Boolean) });
@@ -106,25 +122,51 @@ export function BrandProfileCard({
 
         {/* Header and Logo */}
         <div className="relative pt-0 lg:px-2 lg:pt-2 pb-2">
-          <div className="group relative h-[180px] w-full shrink-0 overflow-hidden lg:rounded-2xl bg-black">
-            <div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ background: gradient }} />
-            <div className="absolute inset-0 flex items-center justify-center">
-               <Typography type="h2" className="text-white drop-shadow-md font-bold">{brand.name}</Typography>
+          <div
+            className={cn("group relative h-[180px] w-full shrink-0 overflow-hidden lg:rounded-2xl bg-black", isEditing && "cursor-pointer")}
+            onClick={() => isEditing && coverInputRef.current?.click()}
+          >
+            {draft.coverImage ? (
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${draft.coverImage})` }} />
+            ) : (
+              <div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ background: gradient }} />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+               <Typography type="h2" className="text-white drop-shadow-md font-bold">{draft.name}</Typography>
             </div>
+            {isEditing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none">
+                <Picture width={30} height={30} className="text-white" />
+              </div>
+            )}
           </div>
+          <input ref={coverInputRef} type="file" className="hidden" accept="image/*" onChange={(event) => handleImageUpload(event, "coverImage")} />
           
           <div className="relative h-10 w-full shrink-0">
             <div className="absolute -top-12 left-6">
               <div className="group relative rounded-full">
                 <div
-                  className="h-[76px] w-[76px] overflow-hidden rounded-full bg-white shadow-sm ring-4 ring-white dark:ring-[#0a0a0a] flex items-center justify-center relative"
+                  className={cn("h-[76px] w-[76px] overflow-hidden rounded-full bg-white shadow-sm ring-4 ring-white dark:ring-[#0a0a0a] flex items-center justify-center relative", isEditing && "cursor-pointer")}
+                  onClick={() => isEditing && avatarInputRef.current?.click()}
                 >
-                  <BrandLogo domain={brand.domain} name={brand.name} className="absolute inset-0 h-full w-full object-cover" />
+                  {draft.avatar ? (
+                    <img src={draft.avatar} alt={draft.name} className="absolute inset-0 h-full w-full object-cover" />
+                  ) : (
+                    <BrandLogo domain={brand.domain} name={brand.name} className="absolute inset-0 h-full w-full object-cover pointer-events-none" />
+                  )}
+                  {isEditing && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none rounded-full">
+                      <PersonPencil width={22} height={22} className="text-white" />
+                    </div>
+                  )}
                 </div>
-                <div className="absolute -bottom-1 -right-1 z-10 rounded-full bg-white p-[1.5px] dark:bg-[#0a0a0a]">
-                  <SealCheck className="h-[20px] w-[20px] text-[#0060ff]" />
-                </div>
+                {!isEditing && (
+                  <div className="absolute -bottom-1 -right-1 z-10 rounded-full bg-white p-[1.5px] dark:bg-[#0a0a0a]">
+                    <SealCheck className="h-[20px] w-[20px] text-[#0060ff]" />
+                  </div>
+                )}
               </div>
+              <input ref={avatarInputRef} type="file" className="hidden" accept="image/*" onChange={(event) => handleImageUpload(event, "avatar")} />
             </div>
           </div>
         </div>

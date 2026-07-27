@@ -27,8 +27,10 @@ import { getFinanceData } from "@/components/finance/finance-data"
 import { getGlobalAnalyticsData, type AnalyticsTimeframe } from "@/components/analytics/platform-analytics-data"
 import { EVENT_TYPE_CONFIG, formatTime, getUpcomingEvents, type CalendarEvent } from "@/lib/calendar-data"
 import { useProfile } from "@/context/profile-context"
+import { useAccount } from "@/context/account-context"
 import { BrandLogo } from "@/components/ui/brand-logo"
 import { cn } from "@/lib/utils"
+import { BrandHomeApp } from "./brand-home-app"
 
 const cardClass = "rounded-2xl border border-[#e4e4e7] bg-white shadow-none dark:border-[#27272a] dark:bg-[#0a0a0a]"
 const brandGradients = [
@@ -146,6 +148,11 @@ function ScoreRing({ score, scoreData }: { score: number, scoreData: Array<{ met
 }
 
 export function HomeApp() {
+  const { isBrand } = useAccount()
+  return isBrand ? <BrandHomeApp /> : <CreatorHomeApp />
+}
+
+function CreatorHomeApp() {
   const { profile } = useProfile()
   const router = useRouter()
   const finance = useMemo(() => getFinanceData(), [])

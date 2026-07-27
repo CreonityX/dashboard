@@ -1,4 +1,4 @@
-export type EventType = "post" | "campaign" | "deadline" | "meeting" | "shoot" | "review" | "personal"
+export type EventType = "post" | "campaign" | "deadline" | "meeting" | "shoot" | "review" | "approval" | "payment" | "personal"
 export type Platform = "instagram" | "youtube" | "tiktok" | "twitter" | "linkedin"
 export type Priority = "low" | "medium" | "high"
 
@@ -14,12 +14,17 @@ export type CalendarEvent = {
   platform?: Platform
   brand?: string
   campaign?: string
+  creator?: string
+  assignee?: string
+  workflowStatus?: "pending" | "approved" | "changes_requested"
+  paymentStatus?: "scheduled" | "released"
   priority?: Priority
   completed?: boolean
   reminder?: string
   tags?: string[]
   multiDay?: boolean
   endDate?: string
+  notInvited?: boolean
 }
 
 export const EVENT_TYPE_CONFIG: Record<EventType, { label: string; color: string; bg: string; border: string; darkBg: string; darkBorder: string }> = {
@@ -29,6 +34,8 @@ export const EVENT_TYPE_CONFIG: Record<EventType, { label: string; color: string
   meeting:   { label: "Meeting",   color: "#14b8a6", bg: "bg-[#e6faf8]",  border: "border-[#14b8a6]/40",  darkBg: "dark:bg-[#0f2e2b]",  darkBorder: "dark:border-[#14b8a6]/30" },
   shoot:     { label: "Shoot",     color: "#f59e0b", bg: "bg-[#fff9eb]",  border: "border-[#f59e0b]/40",  darkBg: "dark:bg-[#332300]",  darkBorder: "dark:border-[#f59e0b]/30" },
   review:    { label: "Review",    color: "#f97316", bg: "bg-[#fff5ed]",  border: "border-[#f97316]/40",  darkBg: "dark:bg-[#3d1f00]",  darkBorder: "dark:border-[#f97316]/30" },
+  approval:  { label: "Approval",  color: "#0ea5e9", bg: "bg-[#eaf7ff]",  border: "border-[#0ea5e9]/40",  darkBg: "dark:bg-[#082f49]",  darkBorder: "dark:border-[#0ea5e9]/30" },
+  payment:   { label: "Payment",   color: "#22c55e", bg: "bg-[#ecfdf3]",  border: "border-[#22c55e]/40",  darkBg: "dark:bg-[#052e16]",  darkBorder: "dark:border-[#22c55e]/30" },
   personal:  { label: "Personal",  color: "#6b7280", bg: "bg-[#f3f4f6]",  border: "border-[#6b7280]/40",  darkBg: "dark:bg-[#1f2123]",  darkBorder: "dark:border-[#6b7280]/30" },
 }
 
@@ -43,7 +50,10 @@ export const PLATFORM_CONFIG: Record<Platform, { label: string; iconId: string; 
 function offset(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
-  return d.toISOString().split("T")[0]
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 export const calendarEvents: CalendarEvent[] = [

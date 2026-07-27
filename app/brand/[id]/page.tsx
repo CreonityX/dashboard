@@ -12,7 +12,9 @@ export default function BrandProfilePage() {
   const { account, brand: activeBrand, updateBrand } = useAccount()
 
   const brand = id === "creonity" && activeBrand ? activeBrand : MOCK_BRANDS[id]
-  const isOwner = account?.role === "brand" && account.brandId === id
+  const isBrandAccount = account?.role === "brand" && account.brandId === id
+  const member = brand?.team?.find(m => m.email === account?.email)
+  const isOwner = isBrandAccount && (member?.role === "Owner" || member?.role === "Admin")
   
   if (!brand) {
     notFound()

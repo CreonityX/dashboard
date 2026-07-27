@@ -77,7 +77,10 @@ function Row({
 
   if (item.id === "notifications" || item.id === "more" || item.id === "search") {
     return (
-      <div className="flex w-full cursor-pointer items-center text-left text-[#0a0a0a] dark:text-white">
+      <div 
+        onClick={onClick}
+        className="flex w-full cursor-pointer items-center text-left text-[#0a0a0a] dark:text-white"
+      >
         {content}
       </div>
     )
@@ -131,30 +134,26 @@ export function DesktopSidebar({ activeId: propActiveId }: { activeId?: string }
         {/* Primary group — vertically centered like the reference */}
         <nav className="flex flex-1 flex-col justify-center gap-[40px]">
           {primaryItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="w-full outline-none"
-              onClick={(e) => {
-                if (item.id === "search") {
-                  e.preventDefault()
-                  window.dispatchEvent(new CustomEvent("open-command-palette"))
-                  return
-                }
-                if (item.id === "notifications") {
-                  setIsNotificationsOpen(!isNotificationsOpen)
-                  setIsMoreOpen(false)
-                } else {
-                  setIsNotificationsOpen(false)
-                  setIsMoreOpen(false)
-                }
-              }}
-            >
+            <div key={item.id} className="w-full outline-none">
               <Row
                 item={item}
                 active={item.id === "notifications" ? isNotificationsOpen : activeId === item.id}
+                onClick={(e?: any) => {
+                  if (item.id === "search") {
+                    e?.preventDefault?.()
+                    window.dispatchEvent(new CustomEvent("open-command-palette"))
+                    return
+                  }
+                  if (item.id === "notifications") {
+                    setIsNotificationsOpen(!isNotificationsOpen)
+                    setIsMoreOpen(false)
+                  } else {
+                    setIsNotificationsOpen(false)
+                    setIsMoreOpen(false)
+                  }
+                }}
               />
-            </button>
+            </div>
           ))}
 
           {/* Profile */}

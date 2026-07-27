@@ -1,16 +1,16 @@
 "use client"
 
 import React, { useState } from "react"
-import { calendarEvents, CalendarEvent, formatDisplayDate } from "@/lib/calendar-data"
+import { CalendarEvent, formatDisplayDate } from "@/lib/calendar-data"
 import { cn } from "@/lib/utils"
 import { ChevronDown, Clock, AlignLeft, Bell, Pencil, Trash2, ChevronLeft } from "lucide-react"
 import { Typography } from "@heroui/react"
 import { toast } from "sonner"
 
-export function TodoList({ isMobileFullScreen, onClose }: { isMobileFullScreen?: boolean, onClose?: () => void }) {
+export function TodoList({ isMobileFullScreen, onClose, initialTasks = [], onComplete }: { isMobileFullScreen?: boolean, onClose?: () => void, initialTasks?: CalendarEvent[], onComplete?: (id: string) => void }) {
   // Initialize from calendarEvents for demo purposes
   const [tasks, setTasks] = useState<CalendarEvent[]>(
-    calendarEvents.filter(e => e.type === "personal" && !e.completed)
+    initialTasks.filter(e => e.type === "personal" && !e.completed)
   )
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
 
@@ -23,6 +23,7 @@ export function TodoList({ isMobileFullScreen, onClose }: { isMobileFullScreen?:
     const isNowCompleted = !tasks.find(t => t.id === id)?.completed
     if (isNowCompleted) {
       toast.success("Task completed")
+      onComplete?.(id)
     }
 
     // In a real app, we'd wait for a bit to show the animation, then remove it

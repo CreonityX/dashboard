@@ -11,6 +11,7 @@ import {
 } from "@gravity-ui/icons"
 import { GradientAvatar } from "@/components/messages/gradient-avatar"
 import type { Conversation } from "@/lib/messages-data"
+import { useAccount } from "@/context/account-context"
 
 function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -40,6 +41,7 @@ export function InfoPanel({
   conversation: Conversation
   onClose: () => void
 }) {
+  const { isBrand } = useAccount()
   const [showReport, setShowReport] = useState(false)
   const [activeTab, setActiveTab] = useState<"files" | "links">("files")
 
@@ -63,6 +65,7 @@ export function InfoPanel({
         />
         <p className="mt-3 text-[18px] font-bold text-[#0a0a0a] dark:text-white">{conversation.name}</p>
         <p className="text-[13px] text-[#737373] dark:text-[#a1a1aa]">{conversation.handle}</p>
+        {isBrand && conversation.systemRole && <p className="mt-1 text-[12px] font-medium text-[#737373] dark:text-[#a1a1aa]">{conversation.systemRole}</p>}
       </div>
 
       {conversation.type === "community" && conversation.members ? (
@@ -206,7 +209,7 @@ export function InfoPanel({
                     className="w-full rounded-lg px-3 py-2 text-left text-[14px] font-medium text-[#0a0a0a] transition-colors hover:bg-[#f4f4f5] dark:text-white dark:hover:bg-[#27272a]"
                     onClick={() => toast.info("Report Submitted", { description: "We will review your report shortly." })}
                   >
-                    Report Brand
+                    {isBrand ? "Report Creator" : "Report Brand"}
                   </button>
                   <button 
                     className="w-full rounded-lg px-3 py-2 text-left text-[14px] font-medium text-[#0a0a0a] transition-colors hover:bg-[#f4f4f5] dark:text-white dark:hover:bg-[#27272a]"

@@ -49,6 +49,14 @@ export type Message =
       deliverables: string[]
       status: "new" | "accepted"
     })
+  | (Base & {
+      kind: "review"
+      creator: string
+      campaign: string
+      title: string
+      assetName: string
+      status: "pending" | "approved" | "changes_requested"
+    })
 
 export type Conversation = {
   id: string
@@ -57,7 +65,7 @@ export type Conversation = {
   brandName?: string
   systemRole?: string
   tone: AvatarTone
-  type?: "dm" | "community"
+  type?: "dm" | "community" | "group"
   role?: "admin" | "member"
   channels?: { id: string; name: string; unread?: number; messages?: Message[] }[]
   members?: { id: string; name: string; role: string; tone: AvatarTone }[]

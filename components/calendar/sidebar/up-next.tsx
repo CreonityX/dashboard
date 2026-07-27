@@ -1,28 +1,28 @@
 "use client"
 
 import React from "react"
-import { getUpcomingEvents, EVENT_TYPE_CONFIG } from "@/lib/calendar-data"
+import { EVENT_TYPE_CONFIG } from "@/lib/calendar-data"
 import { useAgendaContext } from "../agenda/agenda-context"
 import { useRouter } from "next/navigation"
 import { Typography } from "@heroui/react"
 import { cn } from "@/lib/utils"
 
 export function UpNext() {
-  const { selectedEventId, setSelectedEventId } = useAgendaContext()
+  const { selectedEventId, events } = useAgendaContext()
   const router = useRouter()
   
   // Get next 3 upcoming non-task events
-  const events = getUpcomingEvents(30)
+  const upcomingEvents = events.filter(event => event.date >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.date.localeCompare(b.date))
     .filter(e => e.type !== "personal")
     .slice(0, 3)
 
-  if (events.length === 0) return null
+  if (upcomingEvents.length === 0) return null
 
   return (
     <div className="flex flex-col gap-3 mt-2 shrink-0">
       <Typography type="h6" className="font-semibold text-[#0a0a0a] dark:text-white mb-1">Up Next</Typography>
       <div className="flex flex-col gap-2">
-        {events.map(event => {
+        {upcomingEvents.map(event => {
           const config = EVENT_TYPE_CONFIG[event.type]
           const isSelected = selectedEventId === event.id
 
@@ -52,6 +52,7 @@ export function UpNext() {
                       : `${event.startTime} - ${event.endTime}`
                     }
                   </span>
+                  {(event.creator || event.campaign) && <><span>•</span><span className="truncate">{event.creator || event.campaign}</span></>}
                 </Typography>
               </div>
             </button>

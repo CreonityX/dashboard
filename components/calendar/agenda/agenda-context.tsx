@@ -15,6 +15,9 @@ export interface AgendaState {
   setSelectedEventId: (id: string | null) => void
   onEventClick?: (event: CalendarEvent) => void
   onDayClick?: (date: string) => void
+  onEventSave?: (event: CalendarEvent) => void
+  onEventDelete?: (id: string) => void
+  onWorkflowAction?: (event: CalendarEvent, action: "approved" | "changes_requested" | "payment_scheduled") => void
 }
 
 export const AgendaContext = createContext<AgendaState | null>(null)

@@ -35,7 +35,8 @@ function getDaysInMonth(date: Date): Date[] {
 
 export function AgendaMonthView() {
   const { currentDate, events, onEventClick } = useAgendaContext()
-  const todayStr = new Date().toISOString().split("T")[0]
+  const d = new Date()
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const currentMonth = currentDate.getMonth()
 
   const days = getDaysInMonth(currentDate)
@@ -52,7 +53,10 @@ export function AgendaMonthView() {
       </div>
       <div className="flex-1 grid grid-cols-7 grid-rows-6 auto-rows-fr overflow-y-auto">
         {days.map((day, i) => {
-          const dateStr = day.toISOString().split("T")[0]
+          const yyyy = day.getFullYear()
+          const mm = String(day.getMonth() + 1).padStart(2, '0')
+          const dd = String(day.getDate()).padStart(2, '0')
+          const dateStr = `${yyyy}-${mm}-${dd}`
           const isCurrentMonth = day.getMonth() === currentMonth
           const isToday = dateStr === todayStr
           

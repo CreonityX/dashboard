@@ -3,6 +3,7 @@ export type BrandTeamMember = {
   name: string;
   avatarUrl: string;
   role: string;
+  email: string;
 };
 
 export type BrandData = {
@@ -12,6 +13,8 @@ export type BrandData = {
   location: string;
   bio: string;
   website: string;
+  avatar?: string;
+  coverImage?: string;
   instagram?: string;
   youtube?: string;
   categories: string[];
@@ -42,9 +45,9 @@ export const MOCK_BRANDS: Record<string, BrandData> = {
     rating: 4.9,
     trustMetrics: { escrowReleaseDays: 2, responseRate: 97, repeatCreatorRate: 78 },
     team: [
-      { id: "c1", name: "Rishabh", avatarUrl: "https://i.pravatar.cc/150?u=rishabh", role: "Owner" },
-      { id: "c2", name: "Maya Shah", avatarUrl: "https://i.pravatar.cc/150?u=maya", role: "Campaign manager" },
-      { id: "c3", name: "Arjun Mehta", avatarUrl: "https://i.pravatar.cc/150?u=arjun", role: "Admin" }
+      { id: "c1", name: "Rishabh", avatarUrl: "https://i.pravatar.cc/150?u=rishabh", role: "Owner", email: "brand@creonity.com" },
+      { id: "c2", name: "Maya Shah", avatarUrl: "https://i.pravatar.cc/150?u=maya", role: "Campaign manager", email: "maya@creonity.com" },
+      { id: "c3", name: "Arjun Mehta", avatarUrl: "https://i.pravatar.cc/150?u=arjun", role: "Admin", email: "arjun@creonity.com" }
     ]
   },
   "ubereats": {
@@ -159,8 +162,8 @@ export const MOCK_BRANDS: Record<string, BrandData> = {
       repeatCreatorRate: 75,
     },
     team: [
-      { id: "p1", name: "Yvon", avatarUrl: "https://i.pravatar.cc/150?u=yvon", role: "Sustainability Lead" },
-      { id: "p2", name: "Rose", avatarUrl: "https://i.pravatar.cc/150?u=rose", role: "Campaign Manager" }
+      { id: "p1", name: "Yvon", avatarUrl: "https://i.pravatar.cc/150?u=yvon", role: "Sustainability Lead", email: "yvon@patagonia.com" },
+      { id: "p2", name: "Rose", avatarUrl: "https://i.pravatar.cc/150?u=rose", role: "Campaign Manager", email: "rose@patagonia.com" }
     ]
   }
 };

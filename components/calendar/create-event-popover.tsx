@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { X, Clock, MapPin, AlignLeft, Users, Bell } from "lucide-react"
 import { useAgendaContext } from "./agenda/agenda-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { useAccount } from "@/context/account-context"
 
 interface CreateEventPopoverProps {
   children: React.ReactNode
@@ -42,6 +43,7 @@ function DateButton({ date, onChange }: { date: string, onChange: (d: string) =>
 
 export function CreateEventPopover({ children, onSave = () => {} }: CreateEventPopoverProps) {
   const { draftEvent, setDraftEvent } = useAgendaContext()
+  const { isBrand } = useAccount()
   const isMobile = useMediaQuery("(max-width: 768px)")
 
   if (!draftEvent) return <>{children}</>
@@ -50,9 +52,9 @@ export function CreateEventPopover({ children, onSave = () => {} }: CreateEventP
   // The trigger is the phantom block itself (children)
 
   const innerContent = (
-    <>
+    <div className="flex flex-col h-full bg-white dark:bg-[#1c1c1e] rounded-2xl max-sm:rounded-none">
         {/* Top Header Actions */}
-        <div className="flex items-center justify-between p-2 rounded-t-2xl max-sm:rounded-none bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10 max-sm:bg-transparent max-sm:border-none">
+        <div className="flex items-center justify-between p-2 pb-0">
           <div className="px-2 cursor-move max-sm:hidden">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
               <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
@@ -81,13 +83,13 @@ export function CreateEventPopover({ children, onSave = () => {} }: CreateEventP
               
               {/* Event/Task Toggle */}
               <div className="flex gap-2">
-                <Button size="sm" variant={draftEvent.type === "post" ? "solid" : "light"} className={draftEvent.type === "post" ? "bg-[#e8f3ff] text-[#3897f0] font-medium" : "text-gray-600 font-medium"} onClick={() => setDraftEvent({ ...draftEvent, type: "post" })}>Event</Button>
+                <Button size="sm" variant={draftEvent.type !== "personal" ? "solid" : "light"} className={draftEvent.type !== "personal" ? "bg-[#e8f3ff] text-[#3897f0] font-medium" : "text-gray-600 font-medium"} onClick={() => setDraftEvent({ ...draftEvent, type: isBrand ? "campaign" : "post" })}>{isBrand ? "Milestone" : "Event"}</Button>
                 <Button size="sm" variant={draftEvent.type === "personal" ? "solid" : "light"} className={draftEvent.type === "personal" ? "bg-[#e8f3ff] text-[#3897f0] font-medium" : "text-gray-600 font-medium"} onClick={() => setDraftEvent({ ...draftEvent, type: "personal" })}>Task</Button>
               </div>
             </div>
           </div>
 
-          {draftEvent.type === "post" ? (
+          {draftEvent.type !== "personal" ? (
             <>
               {/* Time Selector */}
               <div className="flex items-start gap-3">
@@ -155,6 +157,7 @@ export function CreateEventPopover({ children, onSave = () => {} }: CreateEventP
               </div>
 
               {/* Quick Adds */}
+              {isBrand && <div className="grid grid-cols-2 gap-2 pl-8"><input value={draftEvent.campaign || ""} onChange={(e) => setDraftEvent({ ...draftEvent, campaign: e.target.value })} placeholder="Campaign" className="h-9 rounded-lg bg-[#f4f4f5] px-3 text-[13px] outline-none dark:bg-[#27272a]" /><input value={draftEvent.creator || ""} onChange={(e) => setDraftEvent({ ...draftEvent, creator: e.target.value })} placeholder="Creator" className="h-9 rounded-lg bg-[#f4f4f5] px-3 text-[13px] outline-none dark:bg-[#27272a]" /></div>}
               <div className="flex items-center gap-3 cursor-pointer group">
                 <div className="w-5 flex justify-center shrink-0">
                   <Users className="w-4 h-4 text-gray-400 group-hover:text-gray-700 transition-colors" />
@@ -277,7 +280,7 @@ export function CreateEventPopover({ children, onSave = () => {} }: CreateEventP
             </Button>
           </div>
         </div>
-    </>
+      </div>
   )
 
   if (isMobile) {

@@ -8,6 +8,7 @@ import { UpNext } from "./sidebar/up-next"
 import { TodoList } from "./sidebar/todo-list"
 import { ChevronDown, Plus, ChevronLeft } from "lucide-react"
 import { CircleCheck, CircleCheckFill } from "@gravity-ui/icons"
+import { useAccount } from "@/context/account-context"
 
 // Agenda components
 import { useAgenda } from "./agenda/use-agenda"
@@ -18,15 +19,17 @@ import { AgendaWeekView } from "./agenda/agenda-week-view"
 import { AgendaMonthView } from "./agenda/agenda-month-view"
 import { AgendaDayView } from "./agenda/agenda-day-view"
 
-const ALL_TYPES = Object.keys({ post: 1, campaign: 1, deadline: 1, meeting: 1, shoot: 1, review: 1, personal: 1 }) as EventType[]
+const ALL_TYPES = Object.keys({ post: 1, campaign: 1, deadline: 1, meeting: 1, shoot: 1, review: 1, approval: 1, payment: 1, personal: 1 }) as EventType[]
 
 export function CalendarApp() {
+  const { isBrand, brandCalendarEvents, brandTasks, saveBrandCalendarEvent, deleteBrandCalendarEvent, completeBrandTask } = useAccount()
   const [activeTypes, setActiveTypes] = useState<EventType[]>(ALL_TYPES)
 
   const [isMobileMiniCalOpen, setIsMobileMiniCalOpen] = useState(false)
   const [isMobileTasksOpen, setIsMobileTasksOpen] = useState(false)
 
-  const filteredEvents = calendarEvents.filter(e => activeTypes.includes(e.type))
+  const sourceEvents = isBrand ? [...brandCalendarEvents, ...brandTasks] : calendarEvents
+  const filteredEvents = sourceEvents.filter(e => activeTypes.includes(e.type))
 
   const agenda = useAgenda({
     events: filteredEvents,
@@ -36,13 +39,16 @@ export function CalendarApp() {
       agenda.setDraftEvent({
         id: "draft",
         title: "",
-        type: "post",
+        type: isBrand ? "campaign" : "post",
         date: dateStr,
         startTime: "09:00",
         endTime: "10:00",
         allDay: false
       })
-    }
+    },
+    onEventSave: isBrand ? saveBrandCalendarEvent : undefined,
+    onEventDelete: isBrand ? deleteBrandCalendarEvent : undefined,
+    onWorkflowAction: isBrand ? (event, action) => saveBrandCalendarEvent({ ...event, workflowStatus: action === "approved" ? "approved" : action === "changes_requested" ? "changes_requested" : event.workflowStatus, paymentStatus: action === "payment_scheduled" ? "scheduled" : event.paymentStatus }) : undefined,
   })
 
   return (
@@ -71,7 +77,7 @@ export function CalendarApp() {
                     agenda.setDraftEvent({
                       id: "draft",
                       title: "",
-                      type: key === "event" ? "post" : "personal",
+                    type: key === "task" ? "personal" : key === "deliverable" ? "deadline" : key === "meeting" ? "meeting" : isBrand ? "campaign" : "post",
                       date: todayStr,
                       startTime: startStr,
                       endTime: endStr,
@@ -80,12 +86,7 @@ export function CalendarApp() {
                   }}
                   className="p-1"
                 >
-                  <Dropdown.Item id="event" className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 p-2 text-[14px] font-medium text-[#0a0a0a] dark:text-white">
-                    Event
-                  </Dropdown.Item>
-                  <Dropdown.Item id="task" className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 p-2 text-[14px] font-medium text-[#0a0a0a] dark:text-white">
-                    Task
-                  </Dropdown.Item>
+                  {(isBrand ? [["campaign", "Campaign milestone"], ["deliverable", "Creator deliverable"], ["meeting", "Internal meeting"], ["task", "Team task"]] : [["event", "Event"], ["task", "Task"]]).map(([id, label]) => <Dropdown.Item key={id} id={id} className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 p-2 text-[14px] font-medium text-[#0a0a0a] dark:text-white">{label}</Dropdown.Item>)}
                 </Dropdown.Menu>
               </Dropdown.Popover>
             </Dropdown>
@@ -95,7 +96,7 @@ export function CalendarApp() {
           </div>
           <div className="flex flex-col flex-1 min-h-0 gap-2">
             <UpNext />
-            <TodoList />
+            <TodoList initialTasks={isBrand ? brandTasks : calendarEvents} onComplete={isBrand ? completeBrandTask : undefined} />
           </div>
         </aside>
 
@@ -162,7 +163,7 @@ export function CalendarApp() {
 
             {isMobileTasksOpen && (
               <div className="md:hidden flex-1 overflow-y-auto -mx-4 px-4 pt-2 flex flex-col w-full animate-in fade-in">
-                <TodoList isMobileFullScreen />
+                <TodoList isMobileFullScreen initialTasks={isBrand ? brandTasks : calendarEvents} onComplete={isBrand ? completeBrandTask : undefined} />
               </div>
             )}
 
@@ -193,7 +194,7 @@ export function CalendarApp() {
                     agenda.setDraftEvent({
                       id: "draft",
                       title: "",
-                      type: key === "event" ? "post" : "personal",
+                      type: key === "task" ? "personal" : key === "deliverable" ? "deadline" : key === "meeting" ? "meeting" : isBrand ? "campaign" : "post",
                       date: todayStr,
                       startTime: startStr,
                       endTime: endStr,
@@ -202,12 +203,7 @@ export function CalendarApp() {
                   }}
                   className="p-1"
                 >
-                  <Dropdown.Item id="event" className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 p-2 text-[14px] font-medium text-[#0a0a0a] dark:text-white">
-                    Event
-                  </Dropdown.Item>
-                  <Dropdown.Item id="task" className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 p-2 text-[14px] font-medium text-[#0a0a0a] dark:text-white">
-                    Task
-                  </Dropdown.Item>
+                  {(isBrand ? [["campaign", "Campaign milestone"], ["deliverable", "Creator deliverable"], ["meeting", "Internal meeting"], ["task", "Team task"]] : [["event", "Event"], ["task", "Task"]]).map(([id, label]) => <Dropdown.Item key={id} id={id} className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 p-2 text-[14px] font-medium text-[#0a0a0a] dark:text-white">{label}</Dropdown.Item>)}
                 </Dropdown.Menu>
               </Dropdown.Popover>
             </Dropdown>

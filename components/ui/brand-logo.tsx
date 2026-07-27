@@ -87,6 +87,7 @@ export function BrandLogo({
       alt={name}
       className={className}
       onError={handleError}
+      suppressHydrationWarning
     />
   )
 }

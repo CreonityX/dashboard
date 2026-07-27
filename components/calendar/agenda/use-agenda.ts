@@ -8,6 +8,9 @@ interface UseAgendaProps {
   defaultDate?: Date
   onEventClick?: (event: CalendarEvent) => void
   onDayClick?: (date: string) => void
+  onEventSave?: (event: CalendarEvent) => void
+  onEventDelete?: (id: string) => void
+  onWorkflowAction?: (event: CalendarEvent, action: "approved" | "changes_requested" | "payment_scheduled") => void
 }
 
 export function useAgenda({
@@ -15,7 +18,10 @@ export function useAgenda({
   defaultView = "week",
   defaultDate,
   onEventClick,
-  onDayClick
+  onDayClick,
+  onEventSave,
+  onEventDelete,
+  onWorkflowAction
 }: UseAgendaProps) {
   const [view, setView] = useState<AgendaView>(defaultView)
   const [currentDate, setCurrentDate] = useState<Date>(defaultDate || new Date())
@@ -33,6 +39,9 @@ export function useAgenda({
     selectedEventId,
     setSelectedEventId,
     onEventClick,
-    onDayClick
+    onDayClick,
+    onEventSave,
+    onEventDelete,
+    onWorkflowAction
   }
 }

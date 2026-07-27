@@ -49,31 +49,16 @@ import {
   getPlatformAnalyticsData,
   type AnalyticsTimeframe,
   type PlatformAnalyticsId,
-  type PlatformMetric,
 } from "./platform-analytics-data"
 
 import { PremiumPostsList } from "./all-platforms-components"
+import { AnalyticsBigMetricCard, AnalyticsSmallMetricCard, analyticsCardClass, formatAnalyticsMetric } from "./analytics-metric-cards"
 type IconType = ComponentType<{ className?: string }>
 
-const cardClass = "rounded-2xl border border-gray-200/70 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:border-white/10 dark:bg-[#0a0a0a]"
+const cardClass = analyticsCardClass
 const genderColors = ["#0ea5e9", "#38bdf8", "#bae6fd"]
 
-const metricIcons: Record<string, IconType> = {
-  reach: Globe,
-  followers: Person,
-  impressions: Eye,
-  engagement: ChartColumn,
-  likes: Heart,
-  comments: Comment,
-  shares: ArrowUpRight,
-}
-
-const formatValue = (value: number, suffix = "") => {
-  if (suffix === "%") return `${value.toFixed(1)}%`
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M${suffix}`
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K${suffix}`
-  return `${value.toLocaleString()}${suffix}`
-}
+const formatValue = formatAnalyticsMetric
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name?: string; value?: number; color?: string }>; label?: string }) {
   if (!active || !payload?.length) return null
@@ -112,45 +97,6 @@ function GeographyTooltip({ active, payload }: { active?: boolean; payload?: any
   )
 }
 
-function BigMetricCard({ metric, accent }: { metric: PlatformMetric; accent: string }) {
-  const Icon = metricIcons[metric.id] ?? ChartColumn
-  return (
-    <div className={cn(cardClass, "relative h-[170px] overflow-hidden p-5 lg:p-6")}>
-      <div className="relative z-10">
-        <div className="mb-3 flex items-center gap-2">
-          <Icon className="h-5 w-5 text-gray-400" />
-          <Typography type="body-sm" className="font-semibold text-gray-500 dark:text-gray-400">{metric.label}</Typography>
-        </div>
-        <p className="text-[28px] font-bold leading-none tracking-tight text-[#0a0a0a] dark:text-white">{formatValue(metric.value, metric.suffix)}</p>
-        <p className="mt-3 text-[12px]"><span className="font-semibold text-emerald-500">↑ {metric.change}%</span><span className="ml-1.5 text-gray-400">vs previous period</span></p>
-      </div>
-      <div className="pointer-events-none absolute bottom-0 right-0 top-[36%] w-[58%] opacity-80" style={{ maskImage: "linear-gradient(to right, transparent, black 30%)" }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={metric.series} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-            <defs><linearGradient id={`metric-${metric.id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={accent} stopOpacity={0.3} /><stop offset="95%" stopColor={accent} stopOpacity={0} /></linearGradient></defs>
-            <YAxis hide domain={["dataMin", "dataMax"]} />
-            <Area type="monotone" dataKey="value" stroke={accent} strokeWidth={2} fill={`url(#metric-${metric.id})`} dot={false} isAnimationActive={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  )
-}
-
-function SmallMetricCard({ metric, accent }: { metric: PlatformMetric; accent: string }) {
-  return (
-    <div className={cn(cardClass, "relative h-[92px] overflow-hidden px-4 py-3.5")}>
-      <p className="text-[12px] font-medium text-gray-500 dark:text-gray-400">{metric.label}</p>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="text-[19px] font-bold leading-none tracking-tight text-[#0a0a0a] dark:text-white">{formatValue(metric.value, metric.suffix)}</p>
-        <span className="text-[11px] font-semibold text-emerald-500">↑ {metric.change}%</span>
-      </div>
-      <div className="pointer-events-none absolute bottom-0 right-0 h-8 w-[48%] opacity-50">
-        <ResponsiveContainer width="100%" height="100%"><AreaChart data={metric.series}><Area type="monotone" dataKey="value" stroke={accent} fill="none" strokeWidth={1.5} dot={false} isAnimationActive={false} /></AreaChart></ResponsiveContainer>
-      </div>
-    </div>
-  )
-}
 
 function SectionHeading({ icon: Icon, children }: { icon: IconType; children: string }) {
   return <div className="mb-4 flex items-center gap-2"><Icon className="h-5 w-5 text-gray-400" /><Typography type="body-sm" className="font-semibold text-gray-500 dark:text-gray-400">{children}</Typography></div>
@@ -169,11 +115,11 @@ export function PlatformAnalyticsDashboard({ platform, timeframe, activeTab = "o
       {activeTab === "overview" && (
         <>
           <section className="grid grid-cols-1 gap-4 px-6 sm:grid-cols-3 lg:gap-5">
-            {data.overview.map((metric) => <BigMetricCard key={metric.id} metric={metric} accent={data.accent} />)}
+            {data.overview.map((metric) => <AnalyticsBigMetricCard key={metric.id} metric={metric} accent={data.accent} />)}
           </section>
 
           <section className="mt-4 grid grid-cols-2 gap-3 px-6 sm:grid-cols-4 lg:mt-5 lg:gap-5">
-            {data.engagement.map((metric) => <SmallMetricCard key={metric.id} metric={metric} accent={data.accent} />)}
+            {data.engagement.map((metric) => <AnalyticsSmallMetricCard key={metric.id} metric={metric} accent={data.accent} />)}
           </section>
 
           <section className="mt-5 grid grid-cols-1 gap-5 px-6 sm:grid-cols-2 lg:grid-cols-4">

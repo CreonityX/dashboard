@@ -52,6 +52,8 @@ import { BrandLogo } from "@/components/ui/brand-logo"
 import { Drawer, Slider, Checkbox, CheckboxGroup, Label, ScrollShadow } from "@heroui/react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useSearchParams, useRouter } from "next/navigation"
+import { useAccount } from "@/context/account-context"
+import { BrandCampaignApp } from "./brand-campaign-app"
 
 type CampaignStatus = "Open" | "Closing Soon" | "Filled" | "Closed"
 type CampaignTab = "discover" | "pipeline" | "invitations"
@@ -3269,6 +3271,11 @@ export function SavedCampaignsPanel({ isOpen, onOpenChange, campaigns, onOpen }:
 }
 
 export function CampaignApp() {
+  const { isBrand } = useAccount()
+  return isBrand ? <BrandCampaignApp /> : <CreatorCampaignApp />
+}
+
+function CreatorCampaignApp() {
   const searchParams = useSearchParams()
   const initialTab = (searchParams?.get("tab") as CampaignTab) || "discover"
   const [activeTab, setActiveTab] = useState<CampaignTab>(initialTab)

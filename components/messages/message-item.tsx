@@ -56,7 +56,7 @@ const subText = {
 // ─── Primitives ───────────────────────────────────────────────────────────────
 function ReplySnippet({ replyTo }: { replyTo: any }) {
   if (!replyTo) return null
-  
+
   // Decide what text to show as snippet
   let snippet = "Attachment"
   if (replyTo.kind === "text") snippet = replyTo.text
@@ -67,6 +67,7 @@ function ReplySnippet({ replyTo }: { replyTo: any }) {
   else if (replyTo.kind === "link") snippet = replyTo.title
   else if (replyTo.kind === "booking") snippet = "Booking Request"
   else if (replyTo.kind === "deal") snippet = "Brand Deal"
+  else if (replyTo.kind === "review") snippet = "Content review"
 
   return (
     <div className="mb-1.5 flex flex-col overflow-hidden rounded-[8px] bg-black/5 dark:bg-black/20 pl-2.5 pr-3 py-1.5 border-l-2 border-[#a1a1aa] dark:border-[#737373]">
@@ -286,14 +287,14 @@ function BookingCard({ mine, title, date, timeRange, status, onReschedule }: {
             </PopoverTrigger>
           <PopoverContent className="w-[310px] p-0 border border-[#e4e4e7] dark:border-[#27272a] shadow-xl rounded-[20px] overflow-hidden">
             <div className="flex flex-col">
-              <CustomCalendar 
-                value={selectedDate} 
+              <CustomCalendar
+                value={selectedDate}
                 onChange={setSelectedDate}
               />
-              
+
               <div className="px-4 pb-4">
                 <div className="flex items-center gap-3 mb-4">
-                  <CustomTimePicker 
+                  <CustomTimePicker
                     label="Start Time"
                     value={selectedStartTime}
                     onChange={setSelectedStartTime}
@@ -302,7 +303,7 @@ function BookingCard({ mine, title, date, timeRange, status, onReschedule }: {
                   <div className="flex items-center pt-5">
                     <span className="text-[#a1a1aa] font-bold">—</span>
                   </div>
-                  <CustomTimePicker 
+                  <CustomTimePicker
                     label="End Time"
                     value={selectedEndTime}
                     onChange={setSelectedEndTime}
@@ -376,8 +377,72 @@ function DealCard({ mine, brand, title, budget, deliverables }: {
   )
 }
 
+function ReviewCard({ message, onResolve }: { message: Extract<Message, { kind: "review" }>; onResolve?: (status: "approved" | "changes_requested") => void }) {
+  const pending = message.status === "pending"
+
+  const statusConfig = {
+    pending: { label: "Awaiting Review", color: "text-[#c2710c] dark:text-[#fdba74]", bg: "bg-[#fff3e0] dark:bg-[#7c3503]/40" },
+    approved: { label: "Approved", color: "text-[#16a34a] dark:text-[#4ade80]", bg: "bg-[#dcfce7] dark:bg-[#14532d]/40" },
+    changes_requested: { label: "Changes Requested", color: "text-[#ef4444] dark:text-[#f87171]", bg: "bg-[#fee2e2] dark:bg-[#7f1d1d]/40" }
+  }[message.status]
+
+  return (
+    <div className="max-w-[340px] overflow-hidden rounded-2xl border border-[#efefef] bg-white shadow-sm dark:border-white/10 dark:bg-[#18181b] text-left">
+      {/* Header Area */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center gap-1.5 text-[#0a0a0a] dark:text-white">
+          <CircleCheckFill className="h-4 w-4 text-[#3897f0]" />
+          <span className="text-[12px] font-bold uppercase tracking-wider">Submission</span>
+        </div>
+        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", statusConfig.bg, statusConfig.color)}>
+          {statusConfig.label}
+        </span>
+      </div>
+
+      <div className="px-4 pb-4">
+        {/* Title & Context */}
+        <p className="text-[16px] font-bold leading-tight text-[#0a0a0a] dark:text-white mt-1">{message.title}</p>
+        <p className="mt-1 text-[13px] font-medium text-[#737373] dark:text-[#a1a1aa]">{message.creator} · {message.campaign}</p>
+
+        {/* Asset Preview */}
+        <div className="mt-4 group relative flex h-[160px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl bg-[#f4f4f5] dark:bg-[#27272a] transition-all hover:brightness-95 dark:hover:brightness-110">
+          {/* Subtle gradient pattern */}
+          <div className="absolute inset-0 opacity-40 mix-blend-overlay" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #93c1ff 0%, transparent 60%)' }} />
+          <div className="z-10 flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur-md dark:bg-[#0a0a0a]/50">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1 text-[#0a0a0a] dark:text-white"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          </div>
+        </div>
+
+        {/* File name string */}
+        <div className="mt-2 flex items-center justify-between">
+          <span className="truncate text-[12px] font-medium text-[#737373] dark:text-[#a1a1aa]">{message.assetName}</span>
+          <span className="shrink-0 text-[11px] font-semibold text-[#a1a1aa]">MP4</span>
+        </div>
+
+        {/* Action Buttons */}
+        {pending && (
+          <div className="mt-5 flex gap-2">
+            <button
+              onClick={() => onResolve?.("approved")}
+              className="flex-1 rounded-xl bg-[#0a0a0a] py-2.5 text-[13px] font-semibold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] dark:bg-white dark:text-[#0a0a0a]"
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => onResolve?.("changes_requested")}
+              className="flex-1 rounded-xl bg-[#f4f4f5] py-2.5 text-[13px] font-semibold text-[#0a0a0a] transition-transform hover:scale-[1.02] active:scale-[0.98] dark:bg-[#27272a] dark:text-white dark:hover:bg-[#3f3f46]"
+            >
+              Request Changes
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
-function renderCard(message: Message, mine: boolean, onOpenMedia?: () => void, onReschedule?: (newDate: string, newTime: string) => void) {
+function renderCard(message: Message, mine: boolean, onOpenMedia?: () => void, onReschedule?: (newDate: string, newTime: string) => void, onResolveReview?: (status: "approved" | "changes_requested") => void) {
   switch (message.kind) {
     case "text":
       return <TextBubble mine={mine} message={message} />
@@ -405,6 +470,8 @@ function renderCard(message: Message, mine: boolean, onOpenMedia?: () => void, o
       return <BookingCard mine={mine} title={message.title} date={message.date} timeRange={message.timeRange} status={message.status} onReschedule={onReschedule} />
     case "deal":
       return <DealCard mine={mine} brand={message.brand} title={message.title} budget={message.budget} deliverables={message.deliverables} />
+    case "review":
+      return <ReviewCard message={message} onResolve={onResolveReview} />
     default:
       return null
   }
@@ -416,11 +483,13 @@ export function MessageItem({
   isGrouped = false,
   onReply,
   onReschedule,
+  onResolveReview,
 }: {
   message: Message
   isGrouped?: boolean
   onReply?: (message: Message) => void
   onReschedule?: (message: Message, newDate: string, newTime: string) => void
+  onResolveReview?: (status: "approved" | "changes_requested") => void
 }) {
   const mine = message.sender === "me"
   const [menuOpen, setMenuOpen] = useState(false)
@@ -457,16 +526,16 @@ export function MessageItem({
             {message.senderName}
           </span>
         )}
-        
+
         <div className={cn("group/card relative flex items-center gap-1", mine ? "flex-row-reverse" : "flex-row")}>
-            <div 
+            <div
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onTouchMove={handleTouchEnd}
             >
-              {renderCard(message, mine, () => setViewerOpen(true), (newDate, newTime) => onReschedule?.(message, newDate, newTime))}
+              {renderCard(message, mine, () => setViewerOpen(true), (newDate, newTime) => onReschedule?.(message, newDate, newTime), onResolveReview)}
             </div>
-          
+
           <Popover isOpen={menuOpen} onOpenChange={setMenuOpen} placement={mine ? "bottom-end" : "bottom-start"} offset={10}>
             <Popover.Trigger>
               <button
@@ -481,9 +550,9 @@ export function MessageItem({
               </button>
             </Popover.Trigger>
             <Popover.Content className="w-[180px] p-1">
-              <ListBox 
-                aria-label="Message Actions" 
-                selectionMode="none" 
+              <ListBox
+                aria-label="Message Actions"
+                selectionMode="none"
                 className="w-full"
                 onAction={(key) => {
                   if (key === "reply") {

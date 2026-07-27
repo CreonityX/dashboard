@@ -7,18 +7,21 @@ import { Bell, Link as LinkIcon, Edit2, Trash2, Mail, MoreVertical, Calendar as 
 import { toast } from "sonner"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useSearchParams } from "next/navigation"
+import { useAgendaContext } from "./agenda/agenda-context"
 
 interface EventPopoverProps {
   event: CalendarEvent
   children: React.ReactNode
   allowAutoOpen?: boolean
   disableHover?: boolean
+  onSave?: (event: CalendarEvent) => void
 }
 
 export function EventPopover({ event, children, allowAutoOpen = false }: EventPopoverProps) {
+  const { onEventDelete, onWorkflowAction } = useAgendaContext()
   const [isOpen, setIsOpen] = useState(false)
   const isMobile = useMediaQuery("(max-width: 768px)")
-  
+
   const searchParams = useSearchParams()
   const isTargetEvent = searchParams?.get("eventId") === event.id
 
@@ -32,37 +35,14 @@ export function EventPopover({ event, children, allowAutoOpen = false }: EventPo
 
   // e.g. "Mon, Jun 29"
   const dateStr = formatDisplayDate(event.date)
-  const timeStr = event.allDay 
-    ? "" 
+  const timeStr = event.allDay
+    ? ""
     : ` · ${formatTime(event.startTime!)} – ${event.endTime ? formatTime(event.endTime) : ""}`
-  
-  const innerContent = (
-    <>
-      {/* Top actions bar */}
-      <div className="flex items-center justify-between p-2 rounded-t-2xl max-sm:rounded-none bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10 max-sm:bg-transparent max-sm:border-none">
-          <div className="flex sm:hidden">
-            <Button isIconOnly variant="light" size="sm" onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-1 justify-end ml-auto">
-          <Button isIconOnly variant="light" size="sm" onClick={() => { setIsOpen(false); toast.info("Opening editor...") }} className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
-            <Edit2 className="w-4 h-4" />
-          </Button>
-          <Button isIconOnly variant="light" size="sm" onClick={() => { setIsOpen(false); toast.success("Event deleted") }} className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
-            <Trash2 className="w-4 h-4" />
-          </Button>
-          <Button isIconOnly variant="light" size="sm" onClick={() => toast.success("Email drafted to participants")} className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
-            <Mail className="w-4 h-4" />
-          </Button>
-            <Button isIconOnly variant="light" size="sm" className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
 
+  const innerContent = (
+      <div className="flex flex-col h-full bg-white dark:bg-[#1c1c1e] rounded-2xl max-sm:rounded-none">
         {/* Content */}
-        <div className="flex flex-col gap-3 px-5 pb-5">
+        <div className="flex flex-col gap-3 p-5 pb-4">
           {/* Title and Dot */}
           <div className="flex items-start gap-3">
             <div className="w-5 flex justify-center shrink-0 pt-1.5">
@@ -103,10 +83,15 @@ export function EventPopover({ event, children, allowAutoOpen = false }: EventPo
               <CalendarIcon className="w-4 h-4 text-gray-500" />
             </div>
             <Typography type="body-sm" className="text-[#52525b] dark:text-[#a1a1aa]">
-              {event.brand || "Creonity User"}
+              {event.creator ? `Creator · ${event.creator}` : event.campaign ? `Campaign · ${event.campaign}` : event.brand || "Creonity User"}
             </Typography>
           </div>
-          
+          {(event.type === "approval" || event.type === "payment") && (
+            <div className="ml-8 flex gap-2">
+              {event.type === "approval" ? <><Button size="sm" onPress={() => { onWorkflowAction?.(event, "approved"); toast.success("Deliverable approved") }}>Approve</Button><Button size="sm" variant="outline" onPress={() => { onWorkflowAction?.(event, "changes_requested"); toast.info("Changes requested") }}>Request changes</Button></> : <Button size="sm" onPress={() => { onWorkflowAction?.(event, "payment_scheduled"); toast.success("Payment scheduled") }}>Schedule payment</Button>}
+            </div>
+          )}
+
           {/* Description */}
           {event.description && (
             <div className="flex items-start gap-3 pt-1">
@@ -119,7 +104,30 @@ export function EventPopover({ event, children, allowAutoOpen = false }: EventPo
             </div>
           )}
         </div>
-    </>
+
+        {/* Bottom actions bar */}
+        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-white/5 rounded-b-2xl max-sm:rounded-none mt-auto">
+          <div className="flex sm:hidden">
+            <Button isIconOnly variant="light" size="sm" onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-1 justify-end ml-auto">
+            <Button isIconOnly variant="light" size="sm" onClick={() => { setIsOpen(false); toast.info("Opening editor...") }} className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
+              <Edit2 className="w-4 h-4" />
+            </Button>
+            <Button isIconOnly variant="light" size="sm" onClick={() => { setIsOpen(false); onEventDelete?.(event.id); toast.success("Event deleted") }} className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+            <Button isIconOnly variant="light" size="sm" onClick={() => toast.success("Email drafted to participants")} className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
+              <Mail className="w-4 h-4" />
+            </Button>
+            <Button isIconOnly variant="light" size="sm" className="text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-full">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
   )
 
   if (isMobile) {
@@ -146,14 +154,14 @@ export function EventPopover({ event, children, allowAutoOpen = false }: EventPo
   return (
     <Popover isOpen={isOpen} onOpenChange={setIsOpen} placement="right-start" shouldFlip={true} offset={8} shouldCloseOnInteractOutside={() => true} triggerScaleOnOpen={false}>
       <PopoverTrigger>
-        <div 
+        <div
           onClick={(e) => {
             e.stopPropagation();
             setIsOpen(!isOpen);
           }}
         >{children}</div>
       </PopoverTrigger>
-      <PopoverContent 
+      <PopoverContent
         className="p-0 rounded-2xl shadow-xl border border-[#efefef] dark:border-[#27272a] bg-white dark:bg-[#0a0a0a] w-[360px] outline-none"
       >
         {innerContent}

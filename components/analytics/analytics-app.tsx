@@ -12,6 +12,8 @@ import { CreonityCampaignAnalytics } from "./creonity-campaign-analytics"
 import { AllPlatformsAudience, PremiumPostsList } from "./all-platforms-components"
 import type { AnalyticsTimeframe, PlatformAnalyticsId } from "./platform-analytics-data"
 import { cn } from "@/lib/utils"
+import { useAccount } from "@/context/account-context"
+import { BrandAnalyticsApp } from "./brand-analytics-app"
 
 const TIMEFRAMES = [
   { id: "7d", label: "7D" },
@@ -37,6 +39,7 @@ const TABS = [
 ]
 
 export function AnalyticsApp() {
+  const { isBrand } = useAccount()
   const [timeframe, setTimeframe] = useState("7d")
   const [activePlatform, setActivePlatform] = useState("all")
   const [activeTab, setActiveTab] = useState("overview")
@@ -80,6 +83,8 @@ export function AnalyticsApp() {
         { id: "audience", label: "Audience & Growth" },
         { id: "earnings", label: "Earnings" },
       ]
+
+  if (isBrand) return <BrandAnalyticsApp />
 
   return (
     <div className="flex h-full w-full flex-col bg-white dark:bg-[#0a0a0a] overflow-y-auto">
