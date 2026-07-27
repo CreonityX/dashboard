@@ -10,6 +10,7 @@ import { faGoogle, faMeta, faApple } from "@fortawesome/free-brands-svg-icons"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
 import { Icon } from "@iconify/react"
 import { useAccount } from "@/context/account-context"
+import { loginAction } from "@/app/actions/auth"
 
 function OTPInput({ length = 6 }: { length?: number }) {
   return (
@@ -58,26 +59,31 @@ export function LoginForm() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showReenterPassword, setShowReenterPassword] = useState(false)
 
-  const handleLoginSubmit = (formData: FormData) => {
+  const handleLoginSubmit = async (formData: FormData) => {
     setIsLoading(true)
     setError(null)
     
-    const email = formData.get("email")
-    const password = formData.get("password")
+    const email = String(formData.get("email"))
+    const password = String(formData.get("password"))
 
-    setTimeout(() => {
-      setIsLoading(false)
-      if ((email === "test@creonity.com" || email === "creator@creonity.com" || email === "brand@creonity.com") && password === "Test1234") {
+    try {
+      const result = await loginAction(email, password)
+      
+      if (result.success) {
         const isBrand = email === "brand@creonity.com"
-        signIn(isBrand ? { role: "brand", brandId: "creonity", email: String(email) } : { role: "creator", email: String(email) })
+        signIn(isBrand ? { role: "brand", brandId: "creonity", email } : { role: "creator", email })
         toast.success("Login Successful", {
           description: `Welcome back, ${email}!`
         })
         router.push("/")
       } else {
-        setError("Invalid email or password.")
+        setError(result.error || "Invalid email or password.")
       }
-    }, 1000)
+    } catch (e) {
+      setError("An error occurred during login. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

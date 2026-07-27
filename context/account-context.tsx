@@ -8,6 +8,7 @@ import { brandCalendarSeed, brandConversationSeed, brandTaskSeed } from "@/lib/b
 import { type BrandFinanceState, brandFinanceSeed } from "@/components/finance/brand-finance-data"
 import { type BrandAnalyticsState, brandAnalyticsSeed } from "@/lib/brand-analytics-data"
 import { type BrandCampaign, type BrandCampaignDraft, brandCampaignSeed } from "@/lib/brand-campaign-data"
+import { logoutAction } from "@/app/actions/auth"
 
 export type AccountRole = "creator" | "brand"
 export type ActiveAccount = {
@@ -126,6 +127,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     signOut() {
       setAccount(null)
       localStorage.removeItem(SESSION_KEY)
+      logoutAction()
     },
     updateBrand(updates) {
       setBrand((current) => {
