@@ -1,6 +1,8 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { headers } from 'next/headers'
 import './globals.css'
+import { AuthBootstrap } from './_bootstrap'
 
 export const metadata: Metadata = {
   title: 'Creonity',
@@ -42,11 +44,12 @@ import { MessageToastProvider } from "@/components/messages/message-toast"
 import { ProfileProvider } from "@/context/profile-context"
 import { AccountProvider } from "@/context/account-context"
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const pathname = (await headers()).get('x-pathname') ?? '/'
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
@@ -57,7 +60,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SupportChatProvider>
-            <Toaster 
+            <Toaster
               position="top-right"
               toastOptions={{
                 classNames: {
@@ -71,7 +74,9 @@ export default function RootLayout({
             <MessageToastProvider />
             <SupportChatToast />
             <AccountProvider>
-              <ProfileProvider>{children}</ProfileProvider>
+              <ProfileProvider>
+                <AuthBootstrap pathname={pathname}>{children}</AuthBootstrap>
+              </ProfileProvider>
             </AccountProvider>
             <CommandPalette />
             {process.env.NODE_ENV === 'production' && <Analytics />}

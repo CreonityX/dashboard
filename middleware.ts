@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const PUBLIC_PREFIXES = ['/login', '/invite', '/verify-email']
+
+function isPublic(pathname: string): boolean {
+  return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
 export function middleware(request: NextRequest) {
-  const isLoginPage = request.nextUrl.pathname.startsWith('/login')
-  const isPublicStatic = request.nextUrl.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico)$/)
-  const isNextInternal = request.nextUrl.pathname.startsWith('/_next')
+  const pathname = request.nextUrl.pathname
+  const isPublicStatic = pathname.match(/\.(png|jpg|jpeg|gif|svg|ico)$/)
+  const isNextInternal = pathname.startsWith('/_next')
 
   if (isNextInternal || isPublicStatic) {
     return NextResponse.next()
@@ -12,21 +18,24 @@ export function middleware(request: NextRequest) {
 
   const authCookie = request.cookies.get('creonity_auth')
   const isAuthenticated = !!authCookie?.value
+  const publicPath = isPublic(pathname)
 
-  // Redirect unauthenticated users to the login page
-  if (!isAuthenticated && !isLoginPage) {
+  // Redirect unauthenticated users to the login page (allow public paths)
+  if (!isAuthenticated && !publicPath) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect authenticated users away from the login page
-  if (isAuthenticated && isLoginPage) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
+  // Authenticated users stay on /login only until the bootstrap decides
+  // where to send them. Don't redirect here — let app/login/page.tsx do
+  // the role-aware routing so the bootstrap and the page agree.
 
-  return NextResponse.next()
+  // Forward pathname so the root layout's server-side AuthBootstrap
+  // can make redirect decisions.
+  const res = NextResponse.next()
+  res.headers.set('x-pathname', pathname)
+  return res
 }
 
 export const config = {
-  // Apply middleware to all routes except API, static assets, and favicon
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
