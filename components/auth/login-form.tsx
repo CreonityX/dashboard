@@ -9,8 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faGoogle, faMeta, faApple } from "@fortawesome/free-brands-svg-icons"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
 import { Icon } from "@iconify/react"
-import { useAccount } from "@/context/account-context"
-import { loginAction } from "@/app/actions/auth"
+import { loginAction, mfaLoginAction } from "@/app/actions/auth"
 
 function OTPInput({ length = 6 }: { length?: number }) {
   return (
@@ -18,6 +17,7 @@ function OTPInput({ length = 6 }: { length?: number }) {
       {Array.from({ length }).map((_, i) => (
         <input
           key={i}
+          name={`otp-${i}`}
           type="text"
           maxLength={1}
           className="w-11 h-12 sm:w-12 sm:h-14 text-center text-[20px] font-bold bg-transparent border border-[#e4e4e7] dark:border-[#2a2a2a] focus:border-[#0a0a0a] dark:focus:border-white rounded-xl outline-none transition-colors text-[#0a0a0a] dark:text-white"
@@ -44,11 +44,11 @@ const countryCodes = [
 
 export function LoginForm() {
   const router = useRouter()
-  const { signIn } = useAccount()
   const { setTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [authMode, setAuthMode] = useState<"login" | "forgot_email" | "forgot_otp" | "forgot_success_options" | "forgot_new_password" | "mobile_login" | "mobile_otp">("login")
+  const [authMode, setAuthMode] = useState<"login" | "mfa" | "forgot_email" | "forgot_otp" | "forgot_success_options" | "forgot_new_password" | "mobile_login" | "mobile_otp">("login")
+  const [mfaToken, setMfaToken] = useState("")
   const [selectedCountryCode, setSelectedCountryCode] = useState("+1")
 
   useEffect(() => {
@@ -70,17 +70,37 @@ export function LoginForm() {
       const result = await loginAction(email, password)
       
       if (result.success) {
-        const isBrand = email === "brand@creonity.com"
-        signIn(isBrand ? { role: "brand", brandId: "creonity", email } : { role: "creator", email })
-        toast.success("Login Successful", {
-          description: `Welcome back, ${email}!`
-        })
-        router.push("/")
+        if (result.mfa_required) {
+          setMfaToken(result.mfa_token)
+          setAuthMode("mfa")
+        } else {
+          toast.success("Login Successful", { description: "Welcome back!" })
+          router.push("/")
+        }
       } else {
         setError(result.error || "Invalid email or password.")
       }
     } catch (e) {
       setError("An error occurred during login. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleMfaSubmit = async (formData: FormData) => {
+    setIsLoading(true)
+    setError(null)
+    const code = Array.from({ length: 6 }).map((_, i) => formData.get(`otp-${i}`)).join("")
+    try {
+      const result = await mfaLoginAction(mfaToken, code)
+      if (result.success) {
+        toast.success("Login Successful", { description: "Welcome back!" })
+        router.push("/")
+      } else {
+        setError(result.error || "Invalid verification code.")
+      }
+    } catch (e) {
+      setError("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -203,6 +223,39 @@ export function LoginForm() {
           </div>
         )}
 
+        {/* MFA Step */}
+        {authMode === "mfa" && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex flex-col items-center text-center mb-8">
+              <h1 className="text-3xl font-bold tracking-tight text-[#0a0a0a] dark:text-white">Two-Factor Authentication</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-[14px] mt-2">Enter the 6-digit code from your authenticator app.</p>
+            </div>
+            
+            <form action={handleMfaSubmit} className="flex flex-col gap-6">
+              <div className="flex justify-center">
+                <OTPInput length={6} />
+              </div>
+              
+              {error && (
+                <div className="p-3 text-sm text-rose-500 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-xl">
+                  {error}
+                </div>
+              )}
+
+              <Button type="submit" className="w-full h-12 bg-[#0a0a0a] text-white dark:bg-white dark:text-[#0a0a0a] font-semibold text-[15px] rounded-xl hover:bg-black/85 dark:hover:bg-white/90" isLoading={isLoading}>
+                Verify & Login
+              </Button>
+              
+              <div className="text-center">
+                <button type="button" onClick={() => { setAuthMode("login"); setError(null) }} className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors">
+                  Back to login
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Login Step */}
         {authMode === "login" && (
           <>
             <div>

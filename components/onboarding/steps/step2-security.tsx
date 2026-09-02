@@ -1,9 +1,8 @@
-"use client"
-
 import { useState } from "react"
 import { Icon } from "@iconify/react"
 import { toast } from "sonner"
 import type { StepProps } from "../onboarding-shell"
+import { MfaSetup } from "../../auth/mfa-setup"
 
 const INPUT = "h-11 w-full rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[13.5px] font-medium text-[#0a0a0a] outline-none transition hover:border-[#d4d4d8] focus:border-[#0a0a0a] focus:ring-1 focus:ring-[#0a0a0a] dark:border-[#27272a] dark:bg-[#0a0a0a] dark:text-white dark:hover:border-[#3f3f46] dark:focus:border-white dark:focus:ring-white"
 const LABEL = "text-[13px] font-medium text-[#3f3f46] dark:text-[#a1a1aa]"
@@ -116,40 +115,19 @@ export function Step2Security({ data, onChange, onNext }: StepProps) {
         <label className="flex flex-col gap-1.5">
           <span className={LABEL}>Create password</span>
           <div className="relative">
-            <input
-              type={showPass ? "text" : "password"}
-              className={`${INPUT} pr-11`}
-              placeholder="Min 8 characters"
-              value={data.password}
-              onChange={e => onChange({ password: e.target.value, securityMethod: "password" })}
-            />
-            <button
-              type="button"
-              tabIndex={-1}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#a1a1aa] hover:text-[#52525b] dark:hover:text-white transition-colors"
-              onClick={() => setShowPass(v => !v)}
-            >
+            <input type={showPass ? "text" : "password"} className={`${INPUT} pr-11`} placeholder="Min 8 characters"
+              value={data.password} onChange={e => onChange({ password: e.target.value, securityMethod: "password" })} />
+            <button type="button" tabIndex={-1} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#a1a1aa] hover:text-[#52525b] dark:hover:text-white transition-colors" onClick={() => setShowPass(v => !v)}>
               <Icon icon={showPass ? "gravity-ui:eye-slash" : "gravity-ui:eye"} className="size-4" />
             </button>
           </div>
         </label>
-
         <label className="flex flex-col gap-1.5">
           <span className={LABEL}>Confirm password</span>
           <div className="relative">
-            <input
-              type={showConfirm ? "text" : "password"}
-              className={`${INPUT} pr-11`}
-              placeholder="Repeat your password"
-              value={data.confirmPassword}
-              onChange={e => onChange({ confirmPassword: e.target.value })}
-            />
-            <button
-              type="button"
-              tabIndex={-1}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#a1a1aa] hover:text-[#52525b] dark:hover:text-white transition-colors"
-              onClick={() => setShowConfirm(v => !v)}
-            >
+            <input type={showConfirm ? "text" : "password"} className={`${INPUT} pr-11`} placeholder="Repeat your password"
+              value={data.confirmPassword} onChange={e => onChange({ confirmPassword: e.target.value })} />
+            <button type="button" tabIndex={-1} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#a1a1aa] hover:text-[#52525b] dark:hover:text-white transition-colors" onClick={() => setShowConfirm(v => !v)}>
               <Icon icon={showConfirm ? "gravity-ui:eye-slash" : "gravity-ui:eye"} className="size-4" />
             </button>
           </div>
@@ -162,18 +140,24 @@ export function Step2Security({ data, onChange, onNext }: StepProps) {
         </label>
       </div>
 
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-[#e4e4e7] dark:bg-[#27272a]" />
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-[#a1a1aa]">Two-Factor Authentication</span>
+        <div className="flex-1 h-px bg-[#e4e4e7] dark:bg-[#27272a]" />
+      </div>
+
+      <MfaSetup mfaEnabled={false} />
+
       <p className="text-[12px] text-[#a1a1aa] -mt-4">
-        You can change your security method anytime in{" "}
-        <span className="font-medium text-[#71717a] dark:text-[#71717a]">Settings → Security</span>
+        You can change your security method anytime in <span className="font-medium text-[#71717a] dark:text-[#71717a]">Settings → Security</span>
       </p>
 
-      <button
-        onClick={onNext}
-        disabled={!canContinue}
-        className="h-12 w-full rounded-xl bg-[#0a0a0a] text-white text-[15px] font-semibold hover:bg-black/85 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        Continue →
-      </button>
+      <div className="flex gap-3">
+        <button onClick={onNext} disabled={!canContinue} className="flex-1 h-12 rounded-xl bg-[#0a0a0a] text-white text-[15px] font-semibold hover:bg-black/85 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          Continue →
+        </button>
+      </div>
     </div>
   )
 }

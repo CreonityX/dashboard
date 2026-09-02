@@ -35,21 +35,46 @@ const PLATFORMS = [
 export function Step4Platforms({ data, onChange, onNext }: StepProps) {
   const [connecting, setConnecting] = useState<string | null>(null)
 
-  const handleConnect = (platformId: string) => {
+  const handleConnect = async (platformId: string) => {
     const isConnected = data.connectedPlatforms.includes(platformId)
     if (isConnected) {
       onChange({ connectedPlatforms: data.connectedPlatforms.filter(p => p !== platformId) })
       return
     }
     setConnecting(platformId)
-    setTimeout(() => {
-      setConnecting(null)
-      onChange({ connectedPlatforms: [...data.connectedPlatforms, platformId] })
-      const platform = PLATFORMS.find(p => p.id === platformId)
-      toast.success(`${platform?.label} connected!`, {
-        description: "Your analytics will update once data syncs.",
+    try {
+      // The Next.js API route isn't set up yet, so we'd hit the backend directly
+      // In a real scenario we'd do a fetch to the backend to get the authUrl
+      // For now, this is where we'd do window.location.href = res.authUrl
+      
+      const NEXT_PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3000"
+      
+      const res = await fetch(`${NEXT_PUBLIC_API_BASE}/api/v1/creator/social/connect/${platformId}`, {
+        credentials: "omit", // usually include for same-origin
+        method: "GET",
       })
-    }, 1200)
+      
+      if (res.ok) {
+        const json = await res.json()
+        if (json.authUrl) {
+          window.location.href = json.authUrl
+          return
+        }
+      }
+      
+      // Fallback if backend route isn't ready
+      setTimeout(() => {
+        setConnecting(null)
+        onChange({ connectedPlatforms: [...data.connectedPlatforms, platformId] })
+        const platform = PLATFORMS.find(p => p.id === platformId)
+        toast.success(`${platform?.label} connected!`, { description: "Your analytics will update once data syncs." })
+      }, 1200)
+      
+    } catch (err) {
+      console.error(err)
+      setConnecting(null)
+      toast.error("Failed to connect platform")
+    }
   }
 
   const canContinue = data.connectedPlatforms.length >= 1
@@ -137,13 +162,21 @@ export function Step4Platforms({ data, onChange, onNext }: StepProps) {
         </p>
       </div>
 
-      <button
-        onClick={onNext}
-        disabled={!canContinue}
-        className="h-12 w-full rounded-xl bg-[#0a0a0a] text-white text-[15px] font-semibold hover:bg-black/85 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        Continue →
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={onNext}
+          disabled={!canContinue}
+          className="flex-1 h-12 rounded-xl bg-[#0a0a0a] text-white text-[15px] font-semibold hover:bg-black/85 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Continue →
+        </button>
+        <button
+          onClick={onNext}
+          className="h-12 px-5 rounded-xl border border-[#e4e4e7] dark:border-[#27272a] text-[#52525b] dark:text-[#a1a1aa] text-[14px] font-semibold hover:bg-[#f4f4f5] dark:hover:bg-[#1f1f1f] transition-colors"
+        >
+          Skip for now
+        </button>
+      </div>
     </div>
   )
 }

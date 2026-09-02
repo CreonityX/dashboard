@@ -81,17 +81,11 @@ export function Step5Calendar({ data, onChange, onNext }: StepProps) {
 
       {/* Two CTAs */}
       <div className="flex gap-3">
-        <button
-          onClick={onNext}
-          disabled={!data.calendarConnected}
-          className="flex-1 h-12 rounded-xl bg-[#0a0a0a] text-white text-[15px] font-semibold hover:bg-black/85 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
+        <button onClick={onNext} disabled={!data.calendarConnected}
+          className="flex-1 h-12 rounded-xl bg-[#0a0a0a] text-white text-[15px] font-semibold hover:bg-black/85 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           Connect & Continue →
         </button>
-        <button
-          onClick={onNext}
-          className="h-12 px-5 rounded-xl border border-[#e4e4e7] dark:border-[#27272a] text-[#52525b] dark:text-[#a1a1aa] text-[14px] font-semibold hover:bg-[#f4f4f5] dark:hover:bg-[#1f1f1f] transition-colors"
-        >
+        <button onClick={onNext} className="h-12 px-5 rounded-xl border border-[#e4e4e7] dark:border-[#27272a] text-[#52525b] dark:text-[#a1a1aa] text-[14px] font-semibold hover:bg-[#f4f4f5] dark:hover:bg-[#1f1f1f] transition-colors">
           Skip for now
         </button>
       </div>

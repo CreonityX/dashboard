@@ -6,6 +6,9 @@ import {
   login as apiLogin,
   logout as apiLogout,
   mfaChallenge as apiMfaChallenge,
+  mfaSetup as apiMfaSetup,
+  mfaVerify as apiMfaVerify,
+  mfaDisable as apiMfaDisable,
   registerCreator as apiRegisterCreator,
   registerBrand as apiRegisterBrand,
   resendVerification as apiResendVerification,
@@ -13,6 +16,7 @@ import {
   type RegisterPayload,
   type TokenPair,
   type MfaRequired,
+  type MfaSetupResult,
 } from "@/lib/api"
 
 const ACCESS_COOKIE = "creonity_auth"
@@ -173,6 +177,56 @@ export async function resendVerificationAction(email: string): Promise<VerifyRes
   } catch (err) {
     if (err instanceof ApiCallError) {
       return { success: false, error: err.message }
+    }
+    return { success: false, error: "Unable to reach the server. Please try again." }
+  }
+}
+
+// ── MFA Setup ─────────────────────────────────────────────────────────────────
+
+export type MfaSetupActionResult =
+  | { success: true; data: MfaSetupResult }
+  | { success: false; error: string };
+
+export async function mfaSetupAction(): Promise<MfaSetupActionResult> {
+  try {
+    const cookiesHeader = await getCookieHeader()
+    if (!cookiesHeader) return { success: false, error: "Not authenticated." }
+    const data = await apiMfaSetup(cookiesHeader)
+    return { success: true, data }
+  } catch (err) {
+    if (err instanceof ApiCallError) return { success: false, error: err.message }
+    return { success: false, error: "Unable to reach the server. Please try again." }
+  }
+}
+
+export type MfaVerifyActionResult = { success: true } | { success: false; error: string };
+
+export async function mfaVerifyAction(code: string): Promise<MfaVerifyActionResult> {
+  try {
+    const cookiesHeader = await getCookieHeader()
+    if (!cookiesHeader) return { success: false, error: "Not authenticated." }
+    await apiMfaVerify(code, cookiesHeader)
+    return { success: true }
+  } catch (err) {
+    if (err instanceof ApiCallError) {
+      return { success: false, error: err.status === 422 ? "Invalid code. Please try again." : err.message }
+    }
+    return { success: false, error: "Unable to reach the server. Please try again." }
+  }
+}
+
+export type MfaDisableActionResult = { success: true } | { success: false; error: string };
+
+export async function mfaDisableAction(password: string, code: string): Promise<MfaDisableActionResult> {
+  try {
+    const cookiesHeader = await getCookieHeader()
+    if (!cookiesHeader) return { success: false, error: "Not authenticated." }
+    await apiMfaDisable(password, code, cookiesHeader)
+    return { success: true }
+  } catch (err) {
+    if (err instanceof ApiCallError) {
+      return { success: false, error: err.status === 422 ? "Invalid code or password. Please try again." : err.message }
     }
     return { success: false, error: "Unable to reach the server. Please try again." }
   }

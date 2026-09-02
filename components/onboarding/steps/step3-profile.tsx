@@ -1,8 +1,10 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { Icon } from "@iconify/react"
 import type { StepProps } from "../onboarding-shell"
+import { saveProfileBasicsAction, uploadAvatarAction, saveExpertiseTagsAction } from "@/app/actions/onboarding"
+import { useOnboarding } from "@/context/onboarding-context"
 
 const INPUT = "h-11 w-full rounded-xl border border-[#e4e4e7] bg-white px-3.5 text-[13.5px] font-medium text-[#0a0a0a] outline-none transition hover:border-[#d4d4d8] focus:border-[#0a0a0a] focus:ring-1 focus:ring-[#0a0a0a] dark:border-[#27272a] dark:bg-[#0a0a0a] dark:text-white dark:hover:border-[#3f3f46] dark:focus:border-white dark:focus:ring-white"
 const LABEL = "text-[13px] font-medium text-[#3f3f46] dark:text-[#a1a1aa]"
@@ -33,7 +35,34 @@ export function Step3Profile({ data, onChange, onNext }: StepProps) {
   }
 
   const bioCount = data.bio.length
-  const canContinue = bioCount > 0 && data.location.trim().length > 0 && data.nicheTags.length >= 1
+  const [loading, setLoading] = useState(false)
+  const { refresh } = useOnboarding()
+  const canContinue = bioCount > 0 && data.location.trim().length > 0 && data.nicheTags.length >= 1 && !loading
+
+  const handleSubmit = async () => {
+    setLoading(true)
+    try {
+      if (data.photo) {
+        const formData = new FormData()
+        formData.append("avatar", data.photo)
+        await uploadAvatarAction(formData)
+      }
+      const p1 = saveProfileBasicsAction({
+        displayName: data.name,
+        username: data.socialHandle.replace("@", ""),
+        bio: data.bio,
+      })
+      const p2 = saveExpertiseTagsAction(data.nicheTags)
+      await Promise.all([p1, p2])
+      await refresh()
+      onNext()
+    } catch (err) {
+      console.error(err)
+      // Error handling would go here
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -157,10 +186,11 @@ export function Step3Profile({ data, onChange, onNext }: StepProps) {
       </div>
 
       <button
-        onClick={onNext}
+        onClick={handleSubmit}
         disabled={!canContinue}
-        className="h-12 w-full rounded-xl bg-[#0a0a0a] text-white text-[15px] font-semibold hover:bg-black/85 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="h-12 w-full rounded-xl bg-[#0a0a0a] text-white text-[15px] font-semibold hover:bg-black/85 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
+        {loading ? <Icon icon="gravity-ui:loader" className="size-4 animate-spin" /> : null}
         Save & Continue →
       </button>
     </div>

@@ -3,6 +3,7 @@
 import { cookies } from "next/headers"
 import {
   ApiCallError,
+  acceptTeamInvite as apiAcceptTeamInvite,
   onboardingAvailability as apiOnboardingAvailability,
   onboardingAvatar as apiOnboardingAvatar,
   onboardingComplete as apiOnboardingComplete,
@@ -121,6 +122,22 @@ export async function completeOnboardingAction(): Promise<ActionResult<{ message
     const cookies = await getCookieHeader()
     if (!cookies) return { success: false, error: "Not authenticated." }
     const data = await apiOnboardingComplete(cookies)
+    return { success: true, data }
+  } catch (err) {
+    return { success: false, error: errToString(err) }
+  }
+}
+
+// ── Brand team invite accept ───────────────────────────────────────────────────
+
+export async function acceptInviteAction(
+  memberId: string,
+  token: string,
+): Promise<ActionResult<{ message: string }>> {
+  try {
+    const cookiesHdr = await getCookieHeader()
+    if (!cookiesHdr) return { success: false, error: "Not authenticated." }
+    const data = await apiAcceptTeamInvite(memberId, token, cookiesHdr)
     return { success: true, data }
   } catch (err) {
     return { success: false, error: errToString(err) }

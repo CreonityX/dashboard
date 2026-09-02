@@ -1,8 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { getOnboardingStatusAction } from "@/app/actions/onboarding"
 import { SettingsSidebar } from "./settings-sidebar"
 import { SettingsContent } from "./settings-content"
+
+function OAuthCallbackHandler() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  
+  useEffect(() => {
+    const connected = searchParams?.get("connected")
+    if (connected) {
+      toast.success(`${connected} connected!`, { description: "Your analytics will update soon." })
+      // Check onboarding status and redirect if needed
+      getOnboardingStatusAction().then(res => {
+        if (res.success && !res.data.isComplete) {
+          router.push("/onboarding")
+        }
+      })
+      
+      // Clean up URL
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, "", newUrl)
+    }
+  }, [searchParams, router])
+
+  return null
+}
 
 export function SettingsApp({ initialActiveId }: { initialActiveId: string }) {
   const [activeId, setActiveId] = useState(initialActiveId)
@@ -47,6 +74,10 @@ export function SettingsApp({ initialActiveId }: { initialActiveId: string }) {
       <div className={`h-full w-full flex-1 bg-white dark:bg-[#0a0a0a] flex flex-col ${!activeId ? 'hidden lg:block' : 'block'}`}>
         <SettingsContent activeId={activeId} onBack={() => handleNavigate("")} onNavigate={handleNavigate} />
       </div>
+      
+      <Suspense fallback={null}>
+        <OAuthCallbackHandler />
+      </Suspense>
     </div>
   )
 }

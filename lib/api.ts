@@ -305,3 +305,15 @@ export async function onboardingComplete(forwardCookies: string): Promise<{ mess
     forwardCookies,
   });
 }
+
+export async function acceptTeamInvite(
+  memberId: string,
+  token: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/brand/team-members/${memberId}/accept`, {
+    method: "POST",
+    body: { token },
+    forwardCookies,
+  });
+}
