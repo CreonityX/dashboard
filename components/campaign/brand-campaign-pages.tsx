@@ -1,33 +1,701 @@
-"use client"
-import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, BarChart3, CalendarDays, CheckCircle2, CircleDollarSign, MessageCircle, Pause, Play, Plus, Users } from "lucide-react"
-import { useAccount } from "@/context/account-context"
-import { type BrandCampaignDraft } from "@/lib/brand-campaign-data"
-import { toast } from "sonner"
-import { toUiCampaignStatus } from "@/lib/api"
-import { getBrandCampaignAction, getCampaignApplicationsAction, getDealsAction, reviewApplicationAction, pauseCampaignAction, closeCampaignAction, createCampaignAction, publishCampaignAction } from "@/app/actions/campaign"
-import { cn } from "@/lib/utils"
-const card = "rounded-2xl border border-[#e4e4e7] bg-white dark:border-[#27272a] dark:bg-[#0a0a0a]"
-const money = (v: number) => `₹${v.toLocaleString("en-IN")}`
-const Metric = ({ label, value }: any) => <div className="rounded-xl bg-[#f8f8f9] p-3 dark:bg-[#111111]"><p className="text-[10px] text-[#737373]">{label}</p><p className="mt-1 text-[14px] font-bold text-[#0a0a0a] dark:text-white">{value}</p></div>
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  CircleDollarSign,
+  MessageCircle,
+  Pause,
+  Play,
+  Plus,
+  Users,
+} from "lucide-react";
+import { useAccount } from "@/context/account-context";
+import { type BrandCampaignDraft } from "@/lib/brand-campaign-data";
+import { toast } from "sonner";
+import { toUiCampaignStatus } from "@/lib/api";
+import {
+  getBrandCampaignAction,
+  getCampaignApplicationsAction,
+  getDealsAction,
+  reviewApplicationAction,
+  pauseCampaignAction,
+  resumeCampaignAction,
+  closeCampaignAction,
+  createCampaignAction,
+  publishCampaignAction,
+} from "@/app/actions/campaign";
+import { cn } from "@/lib/utils";
+const card =
+  "rounded-2xl border border-[#e4e4e7] bg-white dark:border-[#27272a] dark:bg-[#0a0a0a]";
+const money = (v: number) => `₹${v.toLocaleString("en-IN")}`;
+const Metric = ({ label, value }: any) => (
+  <div className="rounded-xl bg-[#f8f8f9] p-3 dark:bg-[#111111]">
+    <p className="text-[10px] text-[#737373]">{label}</p>
+    <p className="mt-1 text-[14px] font-bold text-[#0a0a0a] dark:text-white">
+      {value}
+    </p>
+  </div>
+);
 
-export function BrandCampaignDetailPage() { const { id } = useParams<{ id: string }>(); const { isBrand } = useAccount(); const router = useRouter(); const [tab, setTab] = useState("Overview"); const [detail, setDetail] = useState<any>(null); const [loading, setLoading] = useState(true);
-  const load = async () => { const [cRes, aRes, dRes] = await Promise.all([getBrandCampaignAction(id), getCampaignApplicationsAction(id, {}), getDealsAction({})]); if (!cRes.success) { setDetail(null); setLoading(false); return; } const c = cRes.data; const apps = aRes.success ? aRes.data.items : []; const deals = (dRes.success ? dRes.data.items : []).filter(d => d.campaignId === id);
-    const shortId = (v: string) => v.slice(0, 8); const appStatus = (s: string) => s === "accepted" ? "approved" : s === "rejected" ? "changes_requested" : "pending";
-    setDetail({ raw: c, applications: apps, uiStatus: toUiCampaignStatus(c.status), name: c.title, category: (c.nicheTags ?? [])[0] ?? "", brief: c.description, startDate: c.campaignStartDate ? new Date(c.campaignStartDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "", endDate: c.campaignEndDate ? new Date(c.campaignEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "", status: toUiCampaignStatus(c.status), creatorIds: [...new Set(apps.map((a: any) => a.creatorAccountId))], nextMilestone: apps.filter(a => a.status === "pending").length ? `${apps.filter(a => a.status === "pending").length} applications awaiting review` : "No pending applications",
-      deliverables: apps.map((a: any) => ({ appId: a.id, name: a.pitch ? a.pitch.slice(0, 80) : `Bid — ₹${Number(a.proposedRate).toLocaleString("en-IN")}`, creator: shortId(a.creatorAccountId), status: appStatus(a.status), proposedRate: a.proposedRate })),
-      activity: [...apps.map((a: any) => ({ id: `app-${a.id}`, label: `Application ${a.status} — ₹${Number(a.proposedRate).toLocaleString("en-IN")}`, time: new Date(a.createdAt).toLocaleDateString() })), ...deals.map((d: any) => ({ id: `deal-${d.id}`, label: `Deal ${d.status} — ₹${Number(d.agreedRate).toLocaleString("en-IN")}`, time: new Date(d.createdAt).toLocaleDateString() }))],
-      budget: { totalBudget: Number(c.budgetTotal || 0), committed: deals.filter((d: any) => ["accepted","approved","payment_pending","completed"].includes(d.status) || apps.some(a => a.id === d.applicationId && a.status === "accepted")).reduce((n: number, d: any) => n + Number(d.agreedRate || 0), 0), paid: deals.filter((d: any) => ["completed","payment_pending"].includes(d.status)).reduce((n: number, d: any) => n + Number(d.agreedRate || 0), 0), attributedValue: 0 },
-      payments: deals.map((d: any) => ({ creatorName: shortId(d.creatorAccountId), milestone: d.status.replace("_", " "), amount: Number(d.agreedRate || 0), campaignId: d.campaignId })) });
-    setLoading(false); };
-  useEffect(() => { void load(); }, [id]);
-  const review = async (appId: string, action: "shortlist" | "accept" | "reject") => { const res = await reviewApplicationAction(id, appId, { action }); if (!res.success) return toast.error(res.error); toast.success(action === "accept" ? "Application accepted — deal created." : `Application ${action}ed.`); await load(); };
-  const togglePause = async (paused: boolean) => { if (paused) return toast.info("Re-publishing a paused campaign isn't supported yet — duplicate it via New campaign."); const res = await pauseCampaignAction(id); if (!res.success) return toast.error(res.error); toast.success("Campaign paused."); await load(); };
-  const archive = async () => { const res = await closeCampaignAction(id); if (!res.success) return toast.error(res.error); toast.success("Campaign closed."); await load(); };
-  if (!isBrand) return <RedirectHome />; if (loading) return <div className="p-8"><p className="mt-6 text-[#737373]">Loading campaign…</p></div>; const campaign = detail; if (!campaign) return <div className="p-8"><Link href="/campaign" className="text-[#0060ff]">← Back to campaigns</Link><p className="mt-6 text-[#737373]">Campaign not found.</p></div>; const budget = campaign.budget; const analytics = undefined; const payments = campaign.payments; const canManage = true; const approved = campaign.deliverables.filter((item: any) => item.status === "approved").length; return <div className="h-full overflow-y-auto bg-white dark:bg-[#0a0a0a]"><div className="mx-auto max-w-7xl px-6 pb-12 pt-8"><button onClick={() => router.push("/campaign")} className="flex items-center gap-2 text-[13px] font-semibold text-[#737373] hover:text-[#0a0a0a] dark:hover:text-white"><ArrowLeft className="size-4" />Campaigns</button><header className="mt-6 flex flex-col gap-4 border-b border-[#eeeeee] pb-6 dark:border-[#27272a] lg:flex-row lg:items-start lg:justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[.13em] text-[#0060ff]">Campaign workspace</p><h1 className="mt-2 text-[30px] font-bold tracking-tight text-[#0a0a0a] dark:text-white">{campaign.name}</h1><p className="mt-2 text-[13px] text-[#737373]">{campaign.category} · {campaign.startDate} – {campaign.endDate} · {campaign.creatorIds.length} creators</p></div>{canManage && <div className="flex gap-2"><button onClick={() => togglePause(campaign.raw.status === "paused")} className="rounded-xl border border-[#e4e4e7] px-3 py-2 text-[12px] font-semibold dark:border-[#27272a]">{campaign.status === "paused" ? <Play className="size-4" /> : <Pause className="size-4" />}</button><button onClick={() => archive()} className="rounded-xl border border-red-200 px-3 py-2 text-[12px] font-semibold text-red-500">Archive</button></div>}</header><div className="mt-5 flex gap-6 overflow-x-auto border-b border-[#eeeeee] dark:border-[#27272a]">{["Overview","Creators","Deliverables","Budget & payments","Activity"].map(item => <button key={item} onClick={() => setTab(item)} className={cn("relative shrink-0 pb-3 text-[13px] font-semibold", tab === item ? "text-[#0060ff]" : "text-[#737373]")}>{item}{tab === item && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#0060ff]" />}</button>)}</div>{tab === "Overview" && <div className="mt-6 grid gap-5 lg:grid-cols-3"><section className={cn(card,"p-6 lg:col-span-2")}><h2 className="text-[18px] font-bold">Campaign summary</h2><p className="mt-3 text-[13px] leading-relaxed text-[#737373]">{campaign.brief}</p><div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4"><Metric label="Reach" value="—" /><Metric label="Value" value={money(budget?.attributedValue ?? 0)} /><Metric label="Delivery" value={`${approved}/${campaign.deliverables.length}`} /><Metric label="Next" value={campaign.nextMilestone} /></div></section><aside className={cn(card,"p-5")}><h2 className="text-[15px] font-bold">Campaign actions</h2><div className="mt-4 grid gap-2"><Link href="/messages" className="rounded-xl bg-[#0a0a0a] px-3 py-3 text-center text-[12px] font-semibold text-white dark:bg-white dark:text-[#0a0a0a]">Review submissions</Link><Link href="/calendar" className="rounded-xl border border-[#e4e4e7] px-3 py-3 text-center text-[12px] font-semibold dark:border-[#27272a]">Open schedule</Link><Link href="/analytics" className="rounded-xl border border-[#e4e4e7] px-3 py-3 text-center text-[12px] font-semibold dark:border-[#27272a]">View analytics</Link></div></aside></div>}{tab === "Creators" && <section className={cn(card,"mt-6 p-5")}><h2 className="text-[16px] font-bold">Applications</h2><div className="mt-3 divide-y divide-[#eeeeee] dark:divide-[#27272a]">{campaign.applications.length ? campaign.applications.map((a: any) => <div key={a.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="text-[13px] font-semibold">₹{Number(a.proposedRate).toLocaleString("en-IN")}{a.pitch ? ` — ${a.pitch.slice(0, 60)}` : ""}</p><p className="text-[11px] text-[#737373]">{a.status}</p></div>{a.status === "pending" && <div className="flex shrink-0 gap-2"><button onClick={() => review(a.id, "shortlist")} className="rounded-lg border border-[#e4e4e7] px-2.5 py-1.5 text-[11px] font-semibold dark:border-[#27272a]">Shortlist</button><button onClick={() => review(a.id, "accept")} className="rounded-lg bg-[#0a0a0a] px-2.5 py-1.5 text-[11px] font-semibold text-white dark:bg-white dark:text-[#0a0a0a]">Accept</button><button onClick={() => review(a.id, "reject")} className="rounded-lg border border-red-200 px-2.5 py-1.5 text-[11px] font-semibold text-red-500">Reject</button></div>}</div>) : <p className="mt-2 text-[13px] text-[#737373]">No applications yet.</p>}</div></section>}{tab === "Deliverables" && <TabList title="Deliverables" items={campaign.deliverables.map((item: any) => ({ title: item.name, detail: `${item.creator} · ${item.status.replace("_", " ")}`, href: item.status === "pending" ? "/messages" : "/calendar" }))} />}{tab === "Budget & payments" && <div className="mt-6 space-y-4"><div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Metric label="Total budget" value={money(budget?.totalBudget ?? 0)} /><Metric label="Committed" value={money(budget?.committed ?? 0)} /><Metric label="Paid" value={money(budget?.paid ?? 0)} /><Metric label="Remaining" value={money((budget?.totalBudget ?? 0)-(budget?.committed ?? 0))} /></div><TabList title="Creator payments" items={payments.map((item: any) => ({ title: item.creatorName, detail: `${item.milestone} · ${money(item.amount)}`, href: "/earnings" }))} /></div>}{tab === "Activity" && <div className="mt-6 space-y-5">{campaign.activity.map((item: any) => <div key={item.id} className="flex gap-3"><span className="mt-1.5 size-2 rounded-full bg-[#0060ff]" /><div><p className="text-[13px] font-semibold">{item.label}</p><p className="text-[11px] text-[#737373]">{item.time}</p></div></div>)}</div>}</div></div> }
-function TabList({ title, items }: any) { return <section className={cn(card,"mt-6 p-5")}><h2 className="text-[16px] font-bold">{title}</h2><div className="mt-3 divide-y divide-[#eeeeee] dark:divide-[#27272a]">{items.map((item: any) => <Link href={item.href} key={`${item.title}-${item.detail}`} className="flex items-center justify-between py-3"><div><p className="text-[13px] font-semibold">{item.title}</p><p className="text-[11px] text-[#737373]">{item.detail}</p></div><MessageCircle className="size-4 text-[#0060ff]" /></Link>)}</div></section> }
-export function BrandCampaignCreatePage() { const { isBrand, brandAnalytics, createBrandCampaign } = useAccount(); const router = useRouter(); const [step,setStep]=useState(1); const [error,setError]=useState(""); const [draft,setDraft]=useState<any>({name:"",objective:"",category:"Lifestyle",brief:"",startDate:"",endDate:"",creatorIds:[],deliverableNames:["Instagram Reel"],totalBudget:0,committed:0,budgetId:""}); if(!isBrand)return <RedirectHome/>; const next=()=>{ if(step===1&&(!draft.name||!draft.objective||!draft.startDate||!draft.endDate))return setError("Complete all campaign basics."); if(step===3&&draft.committed>draft.totalBudget)return setError("Committed budget cannot exceed total budget."); setError(""); setStep(Math.min(3,step+1))}; const [saving,setSaving]=useState(false); const submit=async (publish:boolean)=>{if(draft.committed>draft.totalBudget)return setError("Committed budget cannot exceed total budget."); setSaving(true); const perCreator = draft.creatorIds.length ? draft.committed / draft.creatorIds.length : draft.totalBudget; const res = await createCampaignAction({ title: draft.name, description: draft.objective || draft.brief || draft.name, nicheTags: [draft.category || "General"], platforms: ["instagram"], contentTypes: inferContentTypes(draft.deliverableNames), budgetTotal: String(draft.totalBudget), budgetPerCreator: String(perCreator || draft.totalBudget), maxCreators: Math.max(draft.creatorIds.length, 1), requirements: draft.brief || undefined, deliverables: draft.deliverableNames.filter(Boolean).map((n:string)=>({ type: "custom", quantity: 1, description: n })), campaignStartDate: draft.startDate ? new Date(draft.startDate).toISOString() : undefined, campaignEndDate: draft.endDate ? new Date(draft.endDate).toISOString() : undefined }); setSaving(false); if(!res.success) return setError(res.error); const cid = res.data.campaignId; if (publish) { const p = await publishCampaignAction(cid); if (!p.success) { router.push(`/campaign/${cid}`); return setError(p.error); } } router.push(`/campaign/${cid}`)}; const field=(label:string,key:string,type="text")=><label className="block text-[12px] font-semibold text-[#737373]">{label}<input type={type} value={draft[key]} onChange={e=>setDraft({...draft,[key]:type==="number"?Number(e.target.value):e.target.value})} className="mt-1.5 h-11 w-full rounded-xl border border-[#e4e4e7] bg-transparent px-3 text-[13px] outline-none dark:border-[#27272a]"/></label>; return <div className="h-full overflow-y-auto bg-white dark:bg-[#0a0a0a]"><div className="mx-auto max-w-3xl px-6 pb-12 pt-8"><Link href="/campaign" className="flex items-center gap-2 text-[13px] font-semibold text-[#737373]"><ArrowLeft className="size-4"/>Cancel</Link><header className="mt-6"><p className="text-[11px] font-bold uppercase tracking-[.13em] text-[#0060ff]">Step {step} of 3</p><h1 className="mt-2 text-[30px] font-bold tracking-tight">Create campaign</h1></header><div className="mt-6 flex gap-2">{[1,2,3].map(n=><span key={n} className={cn("h-1 flex-1 rounded-full",n<=step?"bg-[#0060ff]":"bg-[#e4e4e7] dark:bg-[#27272a]")}/>)}</div><section className={cn(card,"mt-6 p-6 space-y-4")}>{step===1&&<><div className="grid gap-4 sm:grid-cols-2">{field("Campaign name","name")}{field("Category","category")}</div>{field("Objective","objective")}<label className="block text-[12px] font-semibold text-[#737373]">Brief<textarea value={draft.brief} onChange={e=>setDraft({...draft,brief:e.target.value})} className="mt-1.5 min-h-28 w-full rounded-xl border border-[#e4e4e7] bg-transparent p-3 outline-none dark:border-[#27272a]"/></label><div className="grid grid-cols-2 gap-4">{field("Start date","startDate","date")}{field("End date","endDate","date")}</div></>}{step===2&&<><p className="text-[13px] text-[#737373]">Assign creators and define initial deliverables.</p><div className="grid gap-2 sm:grid-cols-2">{brandAnalytics.creators.map(c=><label key={c.id} className="flex items-center gap-2 rounded-xl border border-[#e4e4e7] p-3 text-[12px] font-semibold dark:border-[#27272a]"><input type="checkbox" checked={draft.creatorIds.includes(c.id)} onChange={e=>setDraft({...draft,creatorIds:e.target.checked?[...draft.creatorIds,c.id]:draft.creatorIds.filter((id:string)=>id!==c.id)})}/>{c.name}</label>)}</div><label className="block text-[12px] font-semibold text-[#737373]">Deliverables (comma-separated)<input value={draft.deliverableNames.join(", ")} onChange={e=>setDraft({...draft,deliverableNames:e.target.value.split(",").map((v:string)=>v.trim())})} className="mt-1.5 h-11 w-full rounded-xl border border-[#e4e4e7] bg-transparent px-3 outline-none dark:border-[#27272a]"/></label></>}{step===3&&<><div className="grid grid-cols-2 gap-4">{field("Total budget","totalBudget","number")}{field("Committed amount","committed","number")}</div><div className="rounded-xl bg-[#f8f8f9] p-4 text-[12px] text-[#737373] dark:bg-[#111111]">{draft.name || "Untitled campaign"} will create a finance budget and kickoff calendar milestone.</div></>}{error&&<p className="text-[12px] font-semibold text-red-500">{error}</p>}<div className="flex gap-2 pt-4">{step>1&&<button onClick={()=>setStep(step-1)} className="rounded-xl border border-[#e4e4e7] px-4 py-2.5 text-[12px] font-semibold">Back</button>}{step<3?<button onClick={next} className="ml-auto rounded-xl bg-[#0a0a0a] px-4 py-2.5 text-[12px] font-semibold text-white dark:bg-white dark:text-[#0a0a0a]">Continue</button>:<><button disabled={saving} onClick={()=>submit(false)} className="ml-auto rounded-xl border border-[#e4e4e7] px-4 py-2.5 text-[12px] font-semibold disabled:opacity-50">Save planning</button><button disabled={saving} onClick={()=>submit(true)} className="rounded-xl bg-[#0a0a0a] px-4 py-2.5 text-[12px] font-semibold text-white dark:bg-white dark:text-[#0a0a0a] disabled:opacity-50">{saving ? "Saving…" : "Publish campaign"}</button></>}</div></section></div></div> }
-function inferContentTypes(names: string[]): string[] { const out = new Set<string>(); for (const n of names) { const l = n.toLowerCase(); if (l.includes("reel")) out.add("reel"); else if (l.includes("short")) out.add("short"); else if (l.includes("story") || l.includes("stories")) out.add("story"); else if (l.includes("carousel")) out.add("carousel"); else if (l.includes("image") || l.includes("photo") || l.includes("post")) out.add("image"); else out.add("video"); } return out.size ? [...out] : ["video"]; }
-function RedirectHome(){return <div className="p-8"><Link href="/campaign" className="text-[#0060ff]">Open campaigns</Link></div>}
+export function BrandCampaignDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { isBrand } = useAccount();
+  const router = useRouter();
+  const [tab, setTab] = useState("Overview");
+  const [detail, setDetail] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const load = async () => {
+    const [cRes, aRes, dRes] = await Promise.all([
+      getBrandCampaignAction(id),
+      getCampaignApplicationsAction(id, {}),
+      getDealsAction({}),
+    ]);
+    if (!cRes.success) {
+      setDetail(null);
+      setLoading(false);
+      return;
+    }
+    const c = cRes.data;
+    const apps = aRes.success ? aRes.data.items : [];
+    const deals = (dRes.success ? dRes.data.items : []).filter(
+      (d) => d.campaignId === id,
+    );
+    const shortId = (v: string) => v.slice(0, 8);
+    const appStatus = (s: string) =>
+      s === "accepted"
+        ? "approved"
+        : s === "rejected"
+          ? "changes_requested"
+          : "pending";
+    setDetail({
+      raw: c,
+      applications: apps,
+      uiStatus: toUiCampaignStatus(c.status),
+      name: c.title,
+      category: (c.nicheTags ?? [])[0] ?? "",
+      brief: c.description,
+      startDate: c.campaignStartDate
+        ? new Date(c.campaignStartDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        : "",
+      endDate: c.campaignEndDate
+        ? new Date(c.campaignEndDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        : "",
+      status: toUiCampaignStatus(c.status),
+      creatorIds: [...new Set(apps.map((a: any) => a.creatorAccountId))],
+      nextMilestone: apps.filter((a) => a.status === "pending").length
+        ? `${apps.filter((a) => a.status === "pending").length} applications awaiting review`
+        : "No pending applications",
+      deliverables: apps.map((a: any) => ({
+        appId: a.id,
+        name: a.pitch
+          ? a.pitch.slice(0, 80)
+          : `Bid — ₹${Number(a.proposedRate).toLocaleString("en-IN")}`,
+        creator: shortId(a.creatorAccountId),
+        status: appStatus(a.status),
+        proposedRate: a.proposedRate,
+      })),
+      activity: [
+        ...apps.map((a: any) => ({
+          id: `app-${a.id}`,
+          label: `Application ${a.status} — ₹${Number(a.proposedRate).toLocaleString("en-IN")}`,
+          time: new Date(a.createdAt).toLocaleDateString(),
+        })),
+        ...deals.map((d: any) => ({
+          id: `deal-${d.id}`,
+          label: `Deal ${d.status} — ₹${Number(d.agreedRate).toLocaleString("en-IN")}`,
+          time: new Date(d.createdAt).toLocaleDateString(),
+        })),
+      ],
+      budget: {
+        totalBudget: Number(c.budgetTotal || 0),
+        committed: deals
+          .filter(
+            (d: any) =>
+              ["accepted", "approved", "payment_pending", "completed"].includes(
+                d.status,
+              ) ||
+              apps.some(
+                (a) => a.id === d.applicationId && a.status === "accepted",
+              ),
+          )
+          .reduce((n: number, d: any) => n + Number(d.agreedRate || 0), 0),
+        paid: deals
+          .filter((d: any) =>
+            ["completed", "payment_pending"].includes(d.status),
+          )
+          .reduce((n: number, d: any) => n + Number(d.agreedRate || 0), 0),
+        attributedValue: 0,
+      },
+      payments: deals.map((d: any) => ({
+        creatorName: shortId(d.creatorAccountId),
+        milestone: d.status.replace("_", " "),
+        amount: Number(d.agreedRate || 0),
+        campaignId: d.campaignId,
+      })),
+    });
+    setLoading(false);
+  };
+  useEffect(() => {
+    void load();
+  }, [id]);
+  const review = async (
+    appId: string,
+    action: "shortlist" | "accept" | "reject",
+  ) => {
+    const res = await reviewApplicationAction(id, appId, { action });
+    if (!res.success) return toast.error(res.error);
+    toast.success(
+      action === "accept"
+        ? "Application accepted — deal created."
+        : `Application ${action}ed.`,
+    );
+    await load();
+  };
+  const togglePause = async (paused: boolean) => {
+    const res = paused
+      ? await resumeCampaignAction(id)
+      : await pauseCampaignAction(id);
+    if (!res.success) return toast.error(res.error);
+    toast.success(paused ? "Campaign is live again." : "Campaign paused.");
+    await load();
+  };
+  const archive = async () => {
+    const res = await closeCampaignAction(id);
+    if (!res.success) return toast.error(res.error);
+    toast.success("Campaign closed.");
+    await load();
+  };
+  if (!isBrand) return <RedirectHome />;
+  if (loading)
+    return (
+      <div className="p-8">
+        <p className="mt-6 text-[#737373]">Loading campaign…</p>
+      </div>
+    );
+  const campaign = detail;
+  if (!campaign)
+    return (
+      <div className="p-8">
+        <Link href="/campaign" className="text-[#0060ff]">
+          ← Back to campaigns
+        </Link>
+        <p className="mt-6 text-[#737373]">Campaign not found.</p>
+      </div>
+    );
+  const budget = campaign.budget;
+  const analytics = undefined;
+  const payments = campaign.payments;
+  const canManage = true;
+  const approved = campaign.deliverables.filter(
+    (item: any) => item.status === "approved",
+  ).length;
+  return (
+    <div className="h-full overflow-y-auto bg-white dark:bg-[#0a0a0a]">
+      <div className="mx-auto max-w-7xl px-6 pb-12 pt-8">
+        <button
+          onClick={() => router.push("/campaign")}
+          className="flex items-center gap-2 text-[13px] font-semibold text-[#737373] hover:text-[#0a0a0a] dark:hover:text-white"
+        >
+          <ArrowLeft className="size-4" />
+          Campaigns
+        </button>
+        <header className="mt-6 flex flex-col gap-4 border-b border-[#eeeeee] pb-6 dark:border-[#27272a] lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[.13em] text-[#0060ff]">
+              Campaign workspace
+            </p>
+            <h1 className="mt-2 text-[30px] font-bold tracking-tight text-[#0a0a0a] dark:text-white">
+              {campaign.name}
+            </h1>
+            <p className="mt-2 text-[13px] text-[#737373]">
+              {campaign.category} · {campaign.startDate} – {campaign.endDate} ·{" "}
+              {campaign.creatorIds.length} creators
+            </p>
+          </div>
+          {canManage && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => togglePause(campaign.raw.status === "paused")}
+                className="rounded-xl border border-[#e4e4e7] px-3 py-2 text-[12px] font-semibold dark:border-[#27272a]"
+              >
+                {campaign.status === "paused" ? (
+                  <Play className="size-4" />
+                ) : (
+                  <Pause className="size-4" />
+                )}
+              </button>
+              <button
+                onClick={() => archive()}
+                className="rounded-xl border border-red-200 px-3 py-2 text-[12px] font-semibold text-red-500"
+              >
+                Archive
+              </button>
+            </div>
+          )}
+        </header>
+        <div className="mt-5 flex gap-6 overflow-x-auto border-b border-[#eeeeee] dark:border-[#27272a]">
+          {[
+            "Overview",
+            "Creators",
+            "Deliverables",
+            "Budget & payments",
+            "Activity",
+          ].map((item) => (
+            <button
+              key={item}
+              onClick={() => setTab(item)}
+              className={cn(
+                "relative shrink-0 pb-3 text-[13px] font-semibold",
+                tab === item ? "text-[#0060ff]" : "text-[#737373]",
+              )}
+            >
+              {item}
+              {tab === item && (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#0060ff]" />
+              )}
+            </button>
+          ))}
+        </div>
+        {tab === "Overview" && (
+          <div className="mt-6 grid gap-5 lg:grid-cols-3">
+            <section className={cn(card, "p-6 lg:col-span-2")}>
+              <h2 className="text-[18px] font-bold">Campaign summary</h2>
+              <p className="mt-3 text-[13px] leading-relaxed text-[#737373]">
+                {campaign.brief}
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Metric label="Reach" value="—" />
+                <Metric
+                  label="Value"
+                  value={money(budget?.attributedValue ?? 0)}
+                />
+                <Metric
+                  label="Delivery"
+                  value={`${approved}/${campaign.deliverables.length}`}
+                />
+                <Metric label="Next" value={campaign.nextMilestone} />
+              </div>
+            </section>
+            <aside className={cn(card, "p-5")}>
+              <h2 className="text-[15px] font-bold">Campaign actions</h2>
+              <div className="mt-4 grid gap-2">
+                <Link
+                  href="/messages"
+                  className="rounded-xl bg-[#0a0a0a] px-3 py-3 text-center text-[12px] font-semibold text-white dark:bg-white dark:text-[#0a0a0a]"
+                >
+                  Review submissions
+                </Link>
+                <Link
+                  href="/calendar"
+                  className="rounded-xl border border-[#e4e4e7] px-3 py-3 text-center text-[12px] font-semibold dark:border-[#27272a]"
+                >
+                  Open schedule
+                </Link>
+                <Link
+                  href="/analytics"
+                  className="rounded-xl border border-[#e4e4e7] px-3 py-3 text-center text-[12px] font-semibold dark:border-[#27272a]"
+                >
+                  View analytics
+                </Link>
+              </div>
+            </aside>
+          </div>
+        )}
+        {tab === "Creators" && (
+          <section className={cn(card, "mt-6 p-5")}>
+            <h2 className="text-[16px] font-bold">Applications</h2>
+            <div className="mt-3 divide-y divide-[#eeeeee] dark:divide-[#27272a]">
+              {campaign.applications.length ? (
+                campaign.applications.map((a: any) => (
+                  <div
+                    key={a.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold">
+                        ₹{Number(a.proposedRate).toLocaleString("en-IN")}
+                        {a.pitch ? ` — ${a.pitch.slice(0, 60)}` : ""}
+                      </p>
+                      <p className="text-[11px] text-[#737373]">{a.status}</p>
+                    </div>
+                    {a.status === "pending" && (
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          onClick={() => review(a.id, "shortlist")}
+                          className="rounded-lg border border-[#e4e4e7] px-2.5 py-1.5 text-[11px] font-semibold dark:border-[#27272a]"
+                        >
+                          Shortlist
+                        </button>
+                        <button
+                          onClick={() => review(a.id, "accept")}
+                          className="rounded-lg bg-[#0a0a0a] px-2.5 py-1.5 text-[11px] font-semibold text-white dark:bg-white dark:text-[#0a0a0a]"
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => review(a.id, "reject")}
+                          className="rounded-lg border border-red-200 px-2.5 py-1.5 text-[11px] font-semibold text-red-500"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="mt-2 text-[13px] text-[#737373]">
+                  No applications yet.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+        {tab === "Deliverables" && (
+          <TabList
+            title="Deliverables"
+            items={campaign.deliverables.map((item: any) => ({
+              title: item.name,
+              detail: `${item.creator} · ${item.status.replace("_", " ")}`,
+              href: item.status === "pending" ? "/messages" : "/calendar",
+            }))}
+          />
+        )}
+        {tab === "Budget & payments" && (
+          <div className="mt-6 space-y-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <Metric
+                label="Total budget"
+                value={money(budget?.totalBudget ?? 0)}
+              />
+              <Metric label="Committed" value={money(budget?.committed ?? 0)} />
+              <Metric label="Paid" value={money(budget?.paid ?? 0)} />
+              <Metric
+                label="Remaining"
+                value={money(
+                  (budget?.totalBudget ?? 0) - (budget?.committed ?? 0),
+                )}
+              />
+            </div>
+            <TabList
+              title="Creator payments"
+              items={payments.map((item: any) => ({
+                title: item.creatorName,
+                detail: `${item.milestone} · ${money(item.amount)}`,
+                href: "/earnings",
+              }))}
+            />
+          </div>
+        )}
+        {tab === "Activity" && (
+          <div className="mt-6 space-y-5">
+            {campaign.activity.map((item: any) => (
+              <div key={item.id} className="flex gap-3">
+                <span className="mt-1.5 size-2 rounded-full bg-[#0060ff]" />
+                <div>
+                  <p className="text-[13px] font-semibold">{item.label}</p>
+                  <p className="text-[11px] text-[#737373]">{item.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function TabList({ title, items }: any) {
+  return (
+    <section className={cn(card, "mt-6 p-5")}>
+      <h2 className="text-[16px] font-bold">{title}</h2>
+      <div className="mt-3 divide-y divide-[#eeeeee] dark:divide-[#27272a]">
+        {items.map((item: any) => (
+          <Link
+            href={item.href}
+            key={`${item.title}-${item.detail}`}
+            className="flex items-center justify-between py-3"
+          >
+            <div>
+              <p className="text-[13px] font-semibold">{item.title}</p>
+              <p className="text-[11px] text-[#737373]">{item.detail}</p>
+            </div>
+            <MessageCircle className="size-4 text-[#0060ff]" />
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+export function BrandCampaignCreatePage() {
+  const { isBrand, brandAnalytics, createBrandCampaign } = useAccount();
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [error, setError] = useState("");
+  const [draft, setDraft] = useState<any>({
+    name: "",
+    objective: "",
+    category: "Lifestyle",
+    brief: "",
+    startDate: "",
+    endDate: "",
+    creatorIds: [],
+    deliverableNames: ["Instagram Reel"],
+    totalBudget: 0,
+    committed: 0,
+    budgetId: "",
+  });
+  if (!isBrand) return <RedirectHome />;
+  const next = () => {
+    if (
+      step === 1 &&
+      (!draft.name || !draft.objective || !draft.startDate || !draft.endDate)
+    )
+      return setError("Complete all campaign basics.");
+    if (step === 3 && draft.committed > draft.totalBudget)
+      return setError("Committed budget cannot exceed total budget.");
+    setError("");
+    setStep(Math.min(3, step + 1));
+  };
+  const [saving, setSaving] = useState(false);
+  const submit = async (publish: boolean) => {
+    if (draft.committed > draft.totalBudget)
+      return setError("Committed budget cannot exceed total budget.");
+    setSaving(true);
+    const perCreator = draft.creatorIds.length
+      ? draft.committed / draft.creatorIds.length
+      : draft.totalBudget;
+    const res = await createCampaignAction({
+      title: draft.name,
+      description: draft.objective || draft.brief || draft.name,
+      nicheTags: [draft.category || "General"],
+      platforms: ["instagram"],
+      contentTypes: inferContentTypes(draft.deliverableNames),
+      budgetTotal: String(draft.totalBudget),
+      budgetPerCreator: String(perCreator || draft.totalBudget),
+      maxCreators: Math.max(draft.creatorIds.length, 1),
+      requirements: draft.brief || undefined,
+      deliverables: draft.deliverableNames
+        .filter(Boolean)
+        .map((n: string) => ({ type: "custom", quantity: 1, description: n })),
+      campaignStartDate: draft.startDate
+        ? new Date(draft.startDate).toISOString()
+        : undefined,
+      campaignEndDate: draft.endDate
+        ? new Date(draft.endDate).toISOString()
+        : undefined,
+    });
+    setSaving(false);
+    if (!res.success) return setError(res.error);
+    const cid = res.data.campaignId;
+    if (publish) {
+      const p = await publishCampaignAction(cid);
+      if (!p.success) {
+        router.push(`/campaign/${cid}`);
+        return setError(p.error);
+      }
+    }
+    router.push(`/campaign/${cid}`);
+  };
+  const field = (label: string, key: string, type = "text") => (
+    <label className="block text-[12px] font-semibold text-[#737373]">
+      {label}
+      <input
+        type={type}
+        value={draft[key]}
+        onChange={(e) =>
+          setDraft({
+            ...draft,
+            [key]: type === "number" ? Number(e.target.value) : e.target.value,
+          })
+        }
+        className="mt-1.5 h-11 w-full rounded-xl border border-[#e4e4e7] bg-transparent px-3 text-[13px] outline-none dark:border-[#27272a]"
+      />
+    </label>
+  );
+  return (
+    <div className="h-full overflow-y-auto bg-white dark:bg-[#0a0a0a]">
+      <div className="mx-auto max-w-3xl px-6 pb-12 pt-8">
+        <Link
+          href="/campaign"
+          className="flex items-center gap-2 text-[13px] font-semibold text-[#737373]"
+        >
+          <ArrowLeft className="size-4" />
+          Cancel
+        </Link>
+        <header className="mt-6">
+          <p className="text-[11px] font-bold uppercase tracking-[.13em] text-[#0060ff]">
+            Step {step} of 3
+          </p>
+          <h1 className="mt-2 text-[30px] font-bold tracking-tight">
+            Create campaign
+          </h1>
+        </header>
+        <div className="mt-6 flex gap-2">
+          {[1, 2, 3].map((n) => (
+            <span
+              key={n}
+              className={cn(
+                "h-1 flex-1 rounded-full",
+                n <= step ? "bg-[#0060ff]" : "bg-[#e4e4e7] dark:bg-[#27272a]",
+              )}
+            />
+          ))}
+        </div>
+        <section className={cn(card, "mt-6 p-6 space-y-4")}>
+          {step === 1 && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {field("Campaign name", "name")}
+                {field("Category", "category")}
+              </div>
+              {field("Objective", "objective")}
+              <label className="block text-[12px] font-semibold text-[#737373]">
+                Brief
+                <textarea
+                  value={draft.brief}
+                  onChange={(e) =>
+                    setDraft({ ...draft, brief: e.target.value })
+                  }
+                  className="mt-1.5 min-h-28 w-full rounded-xl border border-[#e4e4e7] bg-transparent p-3 outline-none dark:border-[#27272a]"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                {field("Start date", "startDate", "date")}
+                {field("End date", "endDate", "date")}
+              </div>
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <p className="text-[13px] text-[#737373]">
+                Assign creators and define initial deliverables.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {brandAnalytics.creators.map((c) => (
+                  <label
+                    key={c.id}
+                    className="flex items-center gap-2 rounded-xl border border-[#e4e4e7] p-3 text-[12px] font-semibold dark:border-[#27272a]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={draft.creatorIds.includes(c.id)}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          creatorIds: e.target.checked
+                            ? [...draft.creatorIds, c.id]
+                            : draft.creatorIds.filter(
+                                (id: string) => id !== c.id,
+                              ),
+                        })
+                      }
+                    />
+                    {c.name}
+                  </label>
+                ))}
+              </div>
+              <label className="block text-[12px] font-semibold text-[#737373]">
+                Deliverables (comma-separated)
+                <input
+                  value={draft.deliverableNames.join(", ")}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      deliverableNames: e.target.value
+                        .split(",")
+                        .map((v: string) => v.trim()),
+                    })
+                  }
+                  className="mt-1.5 h-11 w-full rounded-xl border border-[#e4e4e7] bg-transparent px-3 outline-none dark:border-[#27272a]"
+                />
+              </label>
+            </>
+          )}
+          {step === 3 && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                {field("Total budget", "totalBudget", "number")}
+                {field("Committed amount", "committed", "number")}
+              </div>
+              <div className="rounded-xl bg-[#f8f8f9] p-4 text-[12px] text-[#737373] dark:bg-[#111111]">
+                {draft.name || "Untitled campaign"} will create a finance budget
+                and kickoff calendar milestone.
+              </div>
+            </>
+          )}
+          {error && (
+            <p className="text-[12px] font-semibold text-red-500">{error}</p>
+          )}
+          <div className="flex gap-2 pt-4">
+            {step > 1 && (
+              <button
+                onClick={() => setStep(step - 1)}
+                className="rounded-xl border border-[#e4e4e7] px-4 py-2.5 text-[12px] font-semibold"
+              >
+                Back
+              </button>
+            )}
+            {step < 3 ? (
+              <button
+                onClick={next}
+                className="ml-auto rounded-xl bg-[#0a0a0a] px-4 py-2.5 text-[12px] font-semibold text-white dark:bg-white dark:text-[#0a0a0a]"
+              >
+                Continue
+              </button>
+            ) : (
+              <>
+                <button
+                  disabled={saving}
+                  onClick={() => submit(false)}
+                  className="ml-auto rounded-xl border border-[#e4e4e7] px-4 py-2.5 text-[12px] font-semibold disabled:opacity-50"
+                >
+                  Save planning
+                </button>
+                <button
+                  disabled={saving}
+                  onClick={() => submit(true)}
+                  className="rounded-xl bg-[#0a0a0a] px-4 py-2.5 text-[12px] font-semibold text-white dark:bg-white dark:text-[#0a0a0a] disabled:opacity-50"
+                >
+                  {saving ? "Saving…" : "Publish campaign"}
+                </button>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+function inferContentTypes(names: string[]): string[] {
+  const out = new Set<string>();
+  for (const n of names) {
+    const l = n.toLowerCase();
+    if (l.includes("reel")) out.add("reel");
+    else if (l.includes("short")) out.add("short");
+    else if (l.includes("story") || l.includes("stories")) out.add("story");
+    else if (l.includes("carousel")) out.add("carousel");
+    else if (l.includes("image") || l.includes("photo") || l.includes("post"))
+      out.add("image");
+    else out.add("video");
+  }
+  return out.size ? [...out] : ["video"];
+}
+function RedirectHome() {
+  return (
+    <div className="p-8">
+      <Link href="/campaign" className="text-[#0060ff]">
+        Open campaigns
+      </Link>
+    </div>
+  );
+}

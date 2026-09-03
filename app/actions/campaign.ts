@@ -18,6 +18,7 @@ import {
   listDeals as apiListDeals,
   listMyApplications as apiListMyApplications,
   pauseCampaign as apiPauseCampaign,
+  resumeCampaign as apiResumeCampaign,
   publishCampaign as apiPublishCampaign,
   reviewApplication as apiReviewApplication,
   submitDealContent as apiSubmitDealContent,
@@ -93,6 +94,10 @@ export function publishCampaignAction(campaignId: string): Promise<ActionResult<
 
 export function pauseCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiPauseCampaign(campaignId, c))
+}
+
+export function resumeCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiResumeCampaign(campaignId, c))
 }
 
 export function closeCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {

@@ -533,7 +533,7 @@ export async function updateCampaign(
 
 async function campaignTransition(
   campaignId: string,
-  action: "publish" | "pause" | "close" | "cancel",
+  action: "publish" | "pause" | "resume" | "close" | "cancel",
   forwardCookies: string,
 ): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/campaign/${campaignId}/${action}`, {
@@ -544,6 +544,7 @@ async function campaignTransition(
 
 export const publishCampaign = (id: string, c: string) => campaignTransition(id, "publish", c);
 export const pauseCampaign = (id: string, c: string) => campaignTransition(id, "pause", c);
+export const resumeCampaign = (id: string, c: string) => campaignTransition(id, "resume", c);
 export const closeCampaign = (id: string, c: string) => campaignTransition(id, "close", c);
 export const cancelCampaign = (id: string, c: string) => campaignTransition(id, "cancel", c);
 
