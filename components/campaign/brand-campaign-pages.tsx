@@ -449,9 +449,12 @@ export function BrandCampaignCreatePage() {
     startDate: "",
     endDate: "",
     creatorIds: [],
+    platforms: ["instagram"],
+    contentTypes: ["video"],
     deliverableNames: ["Instagram Reel"],
     totalBudget: 0,
     committed: 0,
+    budgetPerCreator: 0,
     budgetId: "",
   });
   if (!isBrand) return <RedirectHome />;
@@ -471,17 +474,14 @@ export function BrandCampaignCreatePage() {
     if (draft.committed > draft.totalBudget)
       return setError("Committed budget cannot exceed total budget.");
     setSaving(true);
-    const perCreator = draft.creatorIds.length
-      ? draft.committed / draft.creatorIds.length
-      : draft.totalBudget;
     const res = await createCampaignAction({
       title: draft.name,
       description: draft.objective || draft.brief || draft.name,
       nicheTags: [draft.category || "General"],
-      platforms: ["instagram"],
-      contentTypes: inferContentTypes(draft.deliverableNames),
+      platforms: draft.platforms.length > 0 ? draft.platforms : ["instagram"],
+      contentTypes: draft.contentTypes.length > 0 ? draft.contentTypes : ["video"],
       budgetTotal: String(draft.totalBudget),
-      budgetPerCreator: String(perCreator || draft.totalBudget),
+      budgetPerCreator: String(draft.budgetPerCreator || draft.totalBudget),
       maxCreators: Math.max(draft.creatorIds.length, 1),
       requirements: draft.brief || undefined,
       deliverables: draft.deliverableNames
@@ -605,6 +605,28 @@ export function BrandCampaignCreatePage() {
                 ))}
               </div>
               <label className="block text-[12px] font-semibold text-[#737373]">
+                Platforms
+                <div className="mt-1.5 flex gap-2 flex-wrap">
+                  {["instagram", "youtube", "tiktok", "x", "linkedin"].map((p) => (
+                    <label key={p} className="flex items-center gap-1.5 rounded-lg border border-[#e4e4e7] px-3 py-2 text-[12px] font-medium dark:border-[#27272a] capitalize cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-[#111111]">
+                      <input type="checkbox" className="accent-[#0060ff]" checked={draft.platforms.includes(p)} onChange={e => setDraft({...draft, platforms: e.target.checked ? [...draft.platforms, p] : draft.platforms.filter((x:string)=>x!==p)})} />
+                      {p}
+                    </label>
+                  ))}
+                </div>
+              </label>
+              <label className="block text-[12px] font-semibold text-[#737373]">
+                Content Types
+                <div className="mt-1.5 flex gap-2 flex-wrap">
+                  {["video", "short", "reel", "story", "image", "carousel"].map((ct) => (
+                    <label key={ct} className="flex items-center gap-1.5 rounded-lg border border-[#e4e4e7] px-3 py-2 text-[12px] font-medium dark:border-[#27272a] capitalize cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-[#111111]">
+                      <input type="checkbox" className="accent-[#0060ff]" checked={draft.contentTypes.includes(ct)} onChange={e => setDraft({...draft, contentTypes: e.target.checked ? [...draft.contentTypes, ct] : draft.contentTypes.filter((x:string)=>x!==ct)})} />
+                      {ct}
+                    </label>
+                  ))}
+                </div>
+              </label>
+              <label className="block text-[12px] font-semibold text-[#737373]">
                 Deliverables (comma-separated)
                 <input
                   value={draft.deliverableNames.join(", ")}
@@ -623,9 +645,10 @@ export function BrandCampaignCreatePage() {
           )}
           {step === 3 && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {field("Total budget", "totalBudget", "number")}
                 {field("Committed amount", "committed", "number")}
+                {field("Per-Creator Cap", "budgetPerCreator", "number")}
               </div>
               <div className="rounded-xl bg-[#f8f8f9] p-4 text-[12px] text-[#737373] dark:bg-[#111111]">
                 {draft.name || "Untitled campaign"} will create a finance budget

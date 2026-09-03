@@ -45,17 +45,17 @@ async function authed<T>(fn: (cookies: string) => Promise<T>): Promise<ActionRes
 
 // ── Brand profile ─────────────────────────────────────────────────────────────
 
-export function getMyBrandAction(): Promise<ActionResult<BrandProfile>> {
+export async function getMyBrandAction(): Promise<ActionResult<BrandProfile>> {
   return authed((c) => apiGetMyBrand(c))
 }
 
-export function updateMyBrandAction(
+export async function updateMyBrandAction(
   payload: UpdateBrandProfilePayload,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiUpdateMyBrand(payload, c))
 }
 
-export function getPublicBrandProfileAction(
+export async function getPublicBrandProfileAction(
   brandId: string,
 ): Promise<ActionResult<PublicBrandProfile>> {
   return authed((c) => apiGetPublicBrandProfile(brandId, c))
@@ -63,24 +63,24 @@ export function getPublicBrandProfileAction(
 
 // ── Brand team ────────────────────────────────────────────────────────────────
 
-export function getBrandTeamAction(): Promise<ActionResult<{ members: TeamMember[] }>> {
+export async function getBrandTeamAction(): Promise<ActionResult<{ members: TeamMember[] }>> {
   return authed((c) => apiListBrandTeam(c))
 }
 
-export function inviteBrandMemberAction(
+export async function inviteBrandMemberAction(
   payload: { email: string; role: string },
 ): Promise<ActionResult<{ message: string; teamMemberId: string }>> {
   return authed((c) => apiInviteBrandMember(payload, c))
 }
 
-export function updateBrandMemberRoleAction(
+export async function updateBrandMemberRoleAction(
   memberId: string,
   role: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiUpdateBrandMemberRole(memberId, role, c))
 }
 
-export function removeBrandMemberAction(
+export async function removeBrandMemberAction(
   memberId: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiRemoveBrandMember(memberId, c))
@@ -88,11 +88,11 @@ export function removeBrandMemberAction(
 
 // ── Creator team ──────────────────────────────────────────────────────────────
 
-export function getCreatorTeamAction(): Promise<ActionResult<{ members: TeamMember[] }>> {
+export async function getCreatorTeamAction(): Promise<ActionResult<{ members: TeamMember[] }>> {
   return authed((c) => apiListCreatorTeam(c))
 }
 
-export function inviteCreatorMemberAction(
+export async function inviteCreatorMemberAction(
   payload: { email: string; role: string },
 ): Promise<ActionResult<{ message: string; teamMemberId: string }>> {
   return authed((c) => apiInviteCreatorMember(payload, c))

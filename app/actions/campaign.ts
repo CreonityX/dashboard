@@ -63,7 +63,7 @@ async function authed<T>(fn: (cookies: string) => Promise<T>): Promise<ActionRes
 
 // ── Brand campaigns ───────────────────────────────────────────────────────────
 
-export function getBrandCampaignsAction(params: {
+export async function getBrandCampaignsAction(params: {
   status?: CampaignStatus;
   limit?: number;
   cursor?: string;
@@ -71,53 +71,53 @@ export function getBrandCampaignsAction(params: {
   return authed((c) => apiListBrandCampaigns(params, c))
 }
 
-export function getBrandCampaignAction(campaignId: string): Promise<ActionResult<Campaign>> {
+export async function getBrandCampaignAction(campaignId: string): Promise<ActionResult<Campaign>> {
   return authed((c) => apiGetBrandCampaign(campaignId, c))
 }
 
-export function createCampaignAction(
+export async function createCampaignAction(
   payload: CreateCampaignPayload,
 ): Promise<ActionResult<{ message: string; campaignId: string }>> {
   return authed((c) => apiCreateCampaign(payload, c))
 }
 
-export function updateCampaignAction(
+export async function updateCampaignAction(
   campaignId: string,
   payload: Partial<CreateCampaignPayload>,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiUpdateCampaign(campaignId, payload, c))
 }
 
-export function publishCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
+export async function publishCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiPublishCampaign(campaignId, c))
 }
 
-export function pauseCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
+export async function pauseCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiPauseCampaign(campaignId, c))
 }
 
-export function resumeCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
+export async function resumeCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiResumeCampaign(campaignId, c))
 }
 
-export function closeCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
+export async function closeCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiCloseCampaign(campaignId, c))
 }
 
-export function cancelCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
+export async function cancelCampaignAction(campaignId: string): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiCancelCampaign(campaignId, c))
 }
 
 // ── Applications (brand reviews) ──────────────────────────────────────────────
 
-export function getCampaignApplicationsAction(
+export async function getCampaignApplicationsAction(
   campaignId: string,
   params: { status?: ApplicationStatus; limit?: number; cursor?: string },
 ): Promise<ActionResult<ApplicationPage>> {
   return authed((c) => apiListCampaignApplications(campaignId, params, c))
 }
 
-export function reviewApplicationAction(
+export async function reviewApplicationAction(
   campaignId: string,
   applicationId: string,
   payload: { action: "shortlist" | "accept" | "reject"; rejectionReason?: string },
@@ -127,24 +127,24 @@ export function reviewApplicationAction(
 
 // ── Discovery + applications (creator) ────────────────────────────────────────
 
-export function discoverCampaignsAction(
+export async function discoverCampaignsAction(
   params: DiscoverFilters,
 ): Promise<ActionResult<CampaignPage>> {
   return authed((c) => apiDiscoverCampaigns(params, c))
 }
 
-export function getDiscoverCampaignAction(campaignId: string): Promise<ActionResult<Campaign>> {
+export async function getDiscoverCampaignAction(campaignId: string): Promise<ActionResult<Campaign>> {
   return authed((c) => apiGetDiscoverCampaign(campaignId, c))
 }
 
-export function applyToCampaignAction(
+export async function applyToCampaignAction(
   campaignId: string,
   payload: { proposedRate: string; pitch?: string },
 ): Promise<ActionResult<{ message: string; applicationId: string }>> {
   return authed((c) => apiApplyToCampaign(campaignId, payload, c))
 }
 
-export function getMyApplicationsAction(params: {
+export async function getMyApplicationsAction(params: {
   status?: ApplicationStatus;
   limit?: number;
   cursor?: string;
@@ -152,7 +152,7 @@ export function getMyApplicationsAction(params: {
   return authed((c) => apiListMyApplications(params, c))
 }
 
-export function withdrawApplicationAction(
+export async function withdrawApplicationAction(
   applicationId: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiWithdrawApplication(applicationId, c))
@@ -160,7 +160,7 @@ export function withdrawApplicationAction(
 
 // ── Deals (both sides) ────────────────────────────────────────────────────────
 
-export function getDealsAction(params: {
+export async function getDealsAction(params: {
   status?: DealStatus;
   limit?: number;
   cursor?: string;
@@ -168,21 +168,21 @@ export function getDealsAction(params: {
   return authed((c) => apiListDeals(params, c))
 }
 
-export function getDealAction(dealId: string): Promise<ActionResult<Deal>> {
+export async function getDealAction(dealId: string): Promise<ActionResult<Deal>> {
   return authed((c) => apiGetDeal(dealId, c))
 }
 
-export function submitDealContentAction(
+export async function submitDealContentAction(
   dealId: string,
   contentSubmissionUrl: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiSubmitDealContent(dealId, contentSubmissionUrl, c))
 }
 
-export function approveDealAction(dealId: string): Promise<ActionResult<{ message: string }>> {
+export async function approveDealAction(dealId: string): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiApproveDeal(dealId, c))
 }
 
-export function cancelDealAction(dealId: string): Promise<ActionResult<{ message: string }>> {
+export async function cancelDealAction(dealId: string): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiCancelDeal(dealId, c))
 }
