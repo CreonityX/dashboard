@@ -795,6 +795,40 @@ export type DmThread = {
   participants: Array<{ userId: string; email: string }>;
 };
 
+
+
+export type MessageReaction = { emoji: string; count: number; userIds: string[] };
+
+export async function listMessageReactions(
+  messageId: string,
+  forwardCookies: string,
+): Promise<MessageReaction[]> {
+  return apiFetch<MessageReaction[]>(`/creator/comms/messages/${messageId}/reactions`, { forwardCookies });
+}
+
+export async function addMessageReaction(
+  messageId: string,
+  emoji: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/messages/${messageId}/reactions`, {
+    method: "POST",
+    body: { emoji },
+    forwardCookies,
+  });
+}
+
+export async function removeMessageReaction(
+  messageId: string,
+  emoji: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
+
 export type UnreadCounts = {
   channels: Array<{ id: string; name: string; unreadCount: number }>;
   dms: Array<{ id: string; unreadCount: number }>;
