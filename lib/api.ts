@@ -89,8 +89,8 @@ export async function apiFetch<T>(path: string, init: Init = {}): Promise<T> {
 // ── Typed auth API ────────────────────────────────────────────────────────────
 
 export type TokenPair = {
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
 };
 
 export type MfaRequired = {

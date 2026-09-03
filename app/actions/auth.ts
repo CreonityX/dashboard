@@ -52,8 +52,8 @@ async function getCookieHeader(): Promise<string | undefined> {
 
 async function setTokenCookies(tokens: TokenPair): Promise<void> {
   const jar = await cookies()
-  jar.set(ACCESS_COOKIE, tokens.accessToken, { ...cookieOpts, maxAge: 15 * 60 })
-  jar.set(REFRESH_COOKIE, tokens.refreshToken, { ...cookieOpts, maxAge: 30 * 24 * 60 * 60 })
+  jar.set(ACCESS_COOKIE, tokens.access_token, { ...cookieOpts, maxAge: 15 * 60 })
+  jar.set(REFRESH_COOKIE, tokens.refresh_token, { ...cookieOpts, maxAge: 30 * 24 * 60 * 60 })
 }
 
 async function clearTokenCookies(): Promise<void> {
