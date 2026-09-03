@@ -152,6 +152,7 @@ export function MessagesApp() {
       })
       void refreshUnread()
     } else if (event.type === "typing.start" || event.type === "typing.stop") {
+      if (event.userId === me.id) return  // ignore our own typing
       const key = `${workspaceId}:${event.channelId}`
       setTyping((prev) => ({ ...prev, [key]: event.type === "typing.start" }))
     } else if (event.type === "user.presence") {
@@ -415,11 +416,15 @@ export function MessagesApp() {
                   />
                 ))}
 
-                {activeId && typing[activeId] && (
-                  <div className="py-2 pl-[52px] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <TypingIndicator avatar={conversation?.name ? conversation.name.substring(0, 2).toUpperCase() : "AI"} />
-                  </div>
-                )}
+                {(() => {
+                  const typingKey = activeChannelId ? `${workspaceId ?? ""}:${activeChannelId}` : null
+                  if (!typingKey || !typing[typingKey]) return null
+                  return (
+                    <div className="py-2 pl-[52px] animate-in fade-in slide-in-bottom-2 duration-300">
+                      <TypingIndicator avatar={conversation?.name ? conversation.name.substring(0, 2).toUpperCase() : "AI"} />
+                    </div>
+                  )
+                })()}
 
                 {/* Scroll anchor */}
                 <div ref={bottomRef} />
