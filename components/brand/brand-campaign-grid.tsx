@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { RecommendedCampaignCard } from "@/components/campaign/recommended-campaign-card"
-import { CAMPAIGNS } from "@/components/campaign/campaign-data"
+import type { Campaign } from "@/components/campaign/campaign-data"
+import { discoverCampaignsAction } from "@/app/actions/campaign"
+import type { Campaign as ApiCampaign } from "@/lib/api"
 
 const MOCK_CREATOR_WORK = [
   { id: "1", url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400", type: "image", creator: "Sophie", aspectClass: "aspect-[9/16]" },
@@ -11,22 +13,64 @@ const MOCK_CREATOR_WORK = [
   { id: "3", url: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400", type: "image", creator: "Elena", aspectClass: "aspect-[4/5]" },
   { id: "4", url: "https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?w=400", type: "image", creator: "David", aspectClass: "aspect-video" },
   { id: "5", url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400", type: "image", creator: "Sarah", aspectClass: "aspect-[9/16]" },
-  { id: "6", url: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400", type: "image", creator: "James", aspectClass: "aspect-square" },
+  { id: "6", url: "https://images.unsplash.com/photo-1483985988355-763728e113?w=400", type: "image", creator: "James", aspectClass: "aspect-square" },
   { id: "7", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400", type: "image", creator: "Mia", aspectClass: "aspect-[4/5]" },
   { id: "8", url: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400", type: "image", creator: "Leo", aspectClass: "aspect-video" },
   { id: "9", url: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400", type: "image", creator: "Alex", aspectClass: "aspect-[9/16]" },
-  { id: "10", url: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400", type: "image", creator: "Priya", aspectClass: "aspect-[4/5]" },
+  { id: "10", url: "https://images.unsplash.com/photo-1611162617474-b723cf961d3e?w=400", type: "image", creator: "Priya", aspectClass: "aspect-[4/5]" },
 ];
 
 const TABS = ["Open Campaigns", "Completed", "Creator Work"];
 
-export function BrandCampaignGrid({ domain }: { domain: string }) {
-  const [activeTab, setActiveTab] = useState("Open Campaigns");
+const money = (v: string) => `₹${Number(v).toLocaleString("en-IN")}`
 
-  // Filter campaigns by the given domain
-  const brandCampaigns = CAMPAIGNS.filter(c => c.domain === domain);
-  const openCampaigns = brandCampaigns.filter(c => c.status === "Open" || c.status === "Closing Soon");
-  const completedCampaigns = brandCampaigns.filter(c => c.status === "Filled" || c.status === "Closed");
+function daysLeftOf(c: ApiCampaign): number {
+  if (!c.applicationDeadline) return 0
+  return Math.max(0, Math.ceil((new Date(c.applicationDeadline).getTime() - Date.now()) / 86400000))
+}
+
+function dueOf(c: ApiCampaign): string {
+  const d = c.applicationDeadline ?? c.campaignEndDate
+  if (!d) return ""
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
+function toUiCampaign(c: ApiCampaign, brandName: string, domain: string): Campaign {
+  const open = c.status === "active"
+  return {
+    id: c.id,
+    brand: brandName,
+    domain,
+    title: c.title,
+    niche: c.nicheTags[0] ?? "",
+    location: "",
+    budget: money(c.budgetPerCreator),
+    daysLeft: daysLeftOf(c),
+    bids: 0,
+    dueDate: dueOf(c),
+    status: open ? "Open" : "Closed",
+    description: c.description,
+    deliverables: c.deliverables.map((d) => `${d.quantity}× ${d.description || d.type}`),
+  }
+}
+
+export function BrandCampaignGrid({ brandId, brandName, domain }: { brandId: string; brandName?: string; domain?: string }) {
+  const [activeTab, setActiveTab] = useState("Open Campaigns");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const res = await discoverCampaignsAction({})
+      if (!res.success || cancelled) return
+      const mine = res.data.items.filter((c) => c.brandAccountId === brandId)
+      setCampaigns(mine.map((c) => toUiCampaign(c, brandName ?? "Brand", domain ?? "")))
+    })()
+    return () => { cancelled = true }
+  }, [brandId, brandName, domain])
+
+  const openCampaigns = campaigns.filter(c => c.status === "Open" || c.status === "Closing Soon");
+  const completedCampaigns = campaigns.filter(c => c.status === "Filled" || c.status === "Closed");
 
   return (
     <div className="flex h-full w-full flex-col">

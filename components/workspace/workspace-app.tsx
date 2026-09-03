@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/context/auth-context"
+import { useCampaigns } from "@/context/campaigns-context"
+import {
+  getBrandCampaignAction,
+  getDealsAction,
+  getDiscoverCampaignAction,
+  submitDealContentAction,
+} from "@/app/actions/campaign"
+import { getPublicBrandProfileAction } from "@/app/actions/brand"
 import { BrandLogo } from "@/components/ui/brand-logo"
 import { ScrollShadow } from "@heroui/react"
 import { toast } from "sonner"
@@ -66,147 +75,85 @@ type WorkspaceDeal = {
   paymentMilestones: PaymentMilestone[]
 }
 
-// ─── Workspace Deals Data ────────────────────────────────────────────────────
+// ─── Backend adapter ─────────────────────────────────────────────────────────
+// Maps the API Deal (+ its campaign title + brand name, enriched by the
+// list below) onto the WorkspaceDeal shape the panels render. Panels keep
+// all of their local UI state (contract signing, milestones); only the
+// content-submit button talks to the API.
 
-const WORKSPACE_DEALS: WorkspaceDeal[] = [
-  {
-    id: "ws-glossier",
-    brand: "Glossier",
-    domain: "glossier.com",
-    title: "You look good — skincare honest reviews",
-    subtitle: "Skincare honest reviews",
-    stage: "content",
-    total: "₹2,100",
-    due: "Aug 08",
-    briefSummary:
-      "Raw, unfiltered skincare reviews. No filters, no ring lights required. Just your honest skin journey with their cult products.",
-    timeline: [
-      { id: "t1", timestamp: "Jul 10", label: "Bid submitted", status: "completed" },
-      { id: "t2", timestamp: "Jul 12", label: "Contract signed", status: "completed" },
-      { id: "t3", timestamp: "Today, 10:00 AM", label: "Uploading content", status: "active" },
-      { id: "t4", timestamp: "", label: "Brand review", status: "pending" },
-      { id: "t5", timestamp: "", label: "Go live", status: "pending" },
-    ],
-    deliverables: [
-      { id: "d1", name: "1 Reel (45-60s)", type: "post", status: "pending" },
-    ],
-    paymentMilestones: [
-      { id: "m1", label: "On content approval", amount: "₹2,100", type: "fixed", status: "locked" },
-    ],
-  },
-  {
-    id: "ws-airbnb",
-    brand: "Airbnb",
-    domain: "airbnb.com",
-    title: "Unique summer getaways series",
-    subtitle: "Unique summer getaways series",
-    stage: "contract",
-    total: "₹4,800",
-    due: "Aug 12",
-    briefSummary:
-      "Show a tangible room transformation without making it feel staged. Natural light, texture, and honest narration matter most.",
-    timeline: [
-      { id: "t1", timestamp: "Jul 2", label: "Bid submitted", status: "completed" },
-      { id: "t2", timestamp: "Jul 4", label: "Negotiation completed", status: "completed" },
-      { id: "t3", timestamp: "Jul 5, 9:00 AM", label: "Contract ready to sign", status: "active" },
-      { id: "t4", timestamp: "", label: "Workspace unlocked", status: "pending" },
-      { id: "t5", timestamp: "", label: "Content submission", status: "pending" },
-      { id: "t6", timestamp: "", label: "Payment release", status: "pending" },
-    ],
-    deliverables: [
-      { id: "d1", name: "1 Reel (45-60s)", type: "post", status: "pending" },
-      { id: "d2", name: "3 edited photos", type: "upload", status: "pending" },
-      { id: "d3", name: "2 Stories", type: "post", status: "pending" },
-    ],
-    paymentMilestones: [
-      { id: "m1", label: "On content approval", amount: "₹2,400", type: "fixed", status: "locked" },
-      { id: "m2", label: "At 50K views", amount: "₹1,200", type: "performance", targetViews: 50000, currentViews: 0, status: "locked" },
-      { id: "m3", label: "At 100K views", amount: "₹1,200", type: "performance", targetViews: 100000, currentViews: 0, status: "locked" },
-    ],
-  },
-  {
-    id: "ws-patagonia",
-    brand: "Patagonia",
-    domain: "patagonia.com",
-    title: "Trail-to-city capsule drop",
-    subtitle: "Trail-to-city capsule drop",
-    stage: "tracking",
-    total: "₹6,250",
-    due: "Jul 29",
-    briefSummary:
-      "Style the capsule in one outdoor and one city setting. Prioritize movement, texture, and utility details.",
-    timeline: [
-      { id: "t1", timestamp: "Jun 20", label: "Bid accepted", status: "completed" },
-      { id: "t2", timestamp: "Jun 22", label: "Contract signed", status: "completed" },
-      { id: "t3", timestamp: "Jun 28", label: "Content approved", status: "completed" },
-      { id: "t4", timestamp: "Jul 1", label: "Content posted — tracking live", note: "₹3,125 released on approval", status: "active" },
-      { id: "t5", timestamp: "", label: "50K views milestone", status: "pending" },
-      { id: "t6", timestamp: "", label: "Final payment release", status: "pending" },
-    ],
-    deliverables: [
-      { id: "d1", name: "1 Reel", type: "post", status: "posted", postUrl: "https://instagram.com/p/example1" },
-      { id: "d2", name: "5 edited photos", type: "upload", status: "approved" },
-      { id: "d3", name: "3 Stories", type: "post", status: "posted", postUrl: "https://instagram.com/s/example2" },
-    ],
-    paymentMilestones: [
-      { id: "m1", label: "On content approval", amount: "₹3,125", type: "fixed", status: "released" },
-      { id: "m2", label: "At 50K views", amount: "₹1,562", type: "performance", targetViews: 50000, currentViews: 31400, status: "locked" },
-      { id: "m3", label: "At 100K views", amount: "₹1,563", type: "performance", targetViews: 100000, currentViews: 31400, status: "locked" },
-    ],
-  },
-  {
-    id: "ws-nike",
-    brand: "Nike",
-    domain: "nike.com",
-    title: "Nike Forward lifestyle drop",
-    subtitle: "Forward lifestyle drop",
-    stage: "content",
-    total: "₹2,500",
-    due: "Aug 02",
-    briefSummary:
-      "Highlight the object details, packaging, and one before/after moment. The tone should be clever, not corporate.",
-    timeline: [
-      { id: "t1", timestamp: "Jul 6", label: "Bid submitted", status: "completed" },
-      { id: "t2", timestamp: "Jul 8", label: "Contract signed", status: "completed" },
-      { id: "t3", timestamp: "Jul 10", label: "Workspace unlocked", status: "completed" },
-      { id: "t4", timestamp: "Today", label: "Brand reviewing content draft", status: "active" },
-      { id: "t5", timestamp: "", label: "Revision or approval", status: "pending" },
-    ],
-    deliverables: [
-      { id: "d1", name: "1 Reel", type: "post", status: "uploaded" },
-      { id: "d2", name: "1 Carousel", type: "upload", status: "pending" },
-    ],
-    paymentMilestones: [
-      { id: "m1", label: "On content approval", amount: "₹2,500", type: "fixed", status: "locked" },
-    ],
-  },
-  {
-    id: "ws-spotify",
-    brand: "Spotify",
-    domain: "spotify.com",
-    title: "Creator workspace playlists",
-    subtitle: "Creator workspace playlists",
-    stage: "completed",
-    total: "₹3,200",
-    due: "Jul 01",
-    briefSummary: "Share the ultimate workspace playlist and the rituals behind how music fuels your creative process.",
-    timeline: [
-      { id: "t1", timestamp: "Jun 1", label: "Contract signed", status: "completed" },
-      { id: "t2", timestamp: "Jun 5", label: "Content approved", status: "completed" },
-      { id: "t3", timestamp: "Jun 10", label: "Content posted", status: "completed" },
-      { id: "t4", timestamp: "Jul 1", label: "All payments released", status: "completed" },
-    ],
-    deliverables: [
-      { id: "d1", name: "1 Reel", type: "post", status: "posted" },
-      { id: "d2", name: "1 Feed post", type: "post", status: "posted" },
-    ],
-    paymentMilestones: [
-      { id: "m1", label: "Full deal payout", amount: "₹3,200", type: "fixed", status: "released" },
-    ],
-  },
-]
+function stageOf(status: string, hasSubmission: boolean): DealStage {
+  switch (status) {
+    case "active":
+      return hasSubmission ? "content" : "contract";
+    case "content_submitted":
+      return "content";
+    case "approved":
+    case "payment_pending":
+      return "tracking";
+    case "completed":
+    case "cancelled":
+      return "completed";
+    default:
+      return "contract";
+  }
+}
 
-// ─── Stepper stages ───────────────────────────────────────────────────────────
+function fmtDate(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function fmtMoney(v: string): string {
+  return `\u20B9${Number(v || 0).toLocaleString("en-IN")}`;
+}
+
+function toWorkspaceDeal(
+  deal: {
+    id: string;
+    campaignId: string;
+    agreedRate: string;
+    status: string;
+    contentSubmissionUrl: string | null;
+    contentSubmittedAt: string | null;
+    createdAt: string;
+  },
+  campaignTitle: string,
+  brandName: string,
+): WorkspaceDeal {
+  const submitted = !!deal.contentSubmissionUrl;
+  const approved = deal.status === "approved" || deal.status === "payment_pending" || deal.status === "completed";
+  return {
+    id: deal.id,
+    brand: brandName,
+    domain: "",
+    title: campaignTitle,
+    subtitle: fmtMoney(deal.agreedRate),
+    stage: stageOf(deal.status, submitted),
+    total: fmtMoney(deal.agreedRate),
+    due: fmtDate(deal.contentSubmittedAt ?? deal.createdAt),
+    briefSummary: "",
+    timeline: [
+      { id: "t1", timestamp: fmtDate(deal.createdAt), label: "Deal created", status: "completed" },
+      ...(submitted
+        ? [{ id: "t2", timestamp: fmtDate(deal.contentSubmittedAt), label: "Content submitted", status: approved ? ("completed" as const) : ("active" as const) }]
+        : []),
+      ...(!approved
+        ? [{ id: "t3", timestamp: "", label: "Brand review", status: "pending" as const }]
+        : []),
+    ],
+    deliverables: [
+      {
+        id: deal.id,
+        name: submitted ? "Content submission" : "Content submission pending",
+        type: "post",
+        status: approved ? "approved" : submitted ? "uploaded" : "pending",
+      },
+    ],
+    paymentMilestones: [],
+  };
+}
+
+// ─── Stepper stages ─────────────────────────────────────────────────────────
 
 const STEPPER_STAGES: { key: DealStage; label: string }[] = [
   { key: "contract", label: "Contract" },
@@ -221,8 +168,6 @@ const STAGE_ORDER: Record<DealStage, number> = {
   tracking: 2,
   completed: 3,
 }
-
-// ─── Status pill helper ────────────────────────────────────────────────────────
 
 function StatusPill({ stage, deal }: { stage: DealStage; deal: WorkspaceDeal }) {
   if (stage === "contract") {
@@ -324,6 +269,20 @@ function HorizontalStepper({ currentStage }: { currentStage: DealStage }) {
 // ─── Content Stage Panel ──────────────────────────────────────────────────────
 
 function ContentStagePanel({ deal }: { deal: WorkspaceDeal }) {
+  const { refreshDeals } = useCampaigns()
+  const [postUrl, setPostUrl] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+
+  const submit = async () => {
+    if (!postUrl.trim()) return toast.error("Paste your content link first")
+    setSubmitting(true)
+    const res = await submitDealContentAction(deal.id, postUrl.trim())
+    setSubmitting(false)
+    if (!res.success) return toast.error(res.error)
+    toast.success("Submitted for brand review!")
+    await refreshDeals()
+  }
+
   return (
     <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr]">
       {/* Deliverables + Upload */}
@@ -346,6 +305,8 @@ function ContentStagePanel({ deal }: { deal: WorkspaceDeal }) {
                 <Link2 className="h-4 w-4 shrink-0 text-gray-400" />
                 <input
                   placeholder="Drop your post link here"
+                  value={postUrl}
+                  onChange={(e) => setPostUrl(e.target.value)}
                   className="flex-1 bg-transparent text-[13px] text-gray-500 outline-none placeholder:text-gray-400 dark:text-white/60"
                 />
               </div>
@@ -364,11 +325,12 @@ function ContentStagePanel({ deal }: { deal: WorkspaceDeal }) {
 
         <button
           type="button"
-          onClick={() => toast.success("Submitted for brand review!")}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#0a0a0a] text-[14px] font-bold text-white transition hover:bg-black/80 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90"
+          onClick={() => void submit()}
+          disabled={submitting}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#0a0a0a] text-[14px] font-bold text-white transition hover:bg-black/80 disabled:opacity-50 dark:bg-white dark:text-[#0a0a0a] dark:hover:bg-white/90"
         >
           <Check className="h-4 w-4" />
-          Submit for Brand Review
+          {submitting ? "Submitting…" : "Submit for Brand Review"}
         </button>
       </div>
 
@@ -709,12 +671,61 @@ function IndividualWorkspace({ deal, onBack }: { deal: WorkspaceDeal; onBack: ()
 
 // ─── Master List ──────────────────────────────────────────────────────────────
 
+/**
+ * Enriched deals: API rows + campaign titles + brand names, cached per id.
+ * Shared by MasterList and IndividualWorkspace so both paint the same data.
+ */
+function useEnrichedDeals(): WorkspaceDeal[] {
+  const { deals: apiDeals, refreshDeals } = useCampaigns()
+  const me = useAuth()
+  const [titles, setTitles] = useState<Record<string, string>>({})
+  const [brands, setBrands] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    void refreshDeals()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const needCampaigns = [...new Set(apiDeals.map((d) => d.campaignId))].filter((id) => !titles[id])
+      const needBrands = [...new Set(apiDeals.map((d) => d.brandAccountId))].filter((id) => !brands[id])
+      if (!needCampaigns.length && !needBrands.length) return
+      const isBrand = me.account_type === "brand"
+      const [cRes, bRes] = await Promise.all([
+        Promise.all(
+          needCampaigns.map(async (id) =>
+            isBrand
+              ? getBrandCampaignAction(id).then((r) => (r.success ? ([id, r.data.title] as const) : null))
+              : getDiscoverCampaignAction(id).then((r) => (r.success ? ([id, r.data.title] as const) : null)),
+          ),
+        ),
+        Promise.all(
+          needBrands.map(async (id) =>
+            getPublicBrandProfileAction(id).then((r) => (r.success ? ([id, r.data.displayName] as const) : null)),
+          ),
+        ),
+      ])
+      if (cancelled) return
+      if (cRes.length) setTitles((prev) => ({ ...prev, ...Object.fromEntries(cRes.filter(Boolean) as Array<readonly [string, string]>) }))
+      if (bRes.length) setBrands((prev) => ({ ...prev, ...Object.fromEntries(bRes.filter(Boolean) as Array<readonly [string, string]>) }))
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiDeals.length])
+
+  return apiDeals.map((d) =>
+    toWorkspaceDeal(d, titles[d.campaignId] ?? "Campaign", brands[d.brandAccountId] ?? "Brand"),
+  )
+}
+
 function MasterList({ onSelect }: { onSelect: (deal: WorkspaceDeal) => void }) {
   const [tab, setTab] = useState<"active" | "completed">("active")
-
-  const activeDeals = WORKSPACE_DEALS.filter(d => d.stage !== "completed")
-  const completedDeals = WORKSPACE_DEALS.filter(d => d.stage === "completed")
-  const deals = tab === "active" ? activeDeals : completedDeals
+  const deals = useEnrichedDeals()
+  const activeDeals = deals.filter(d => d.stage !== "completed")
+  const completedDeals = deals.filter(d => d.stage === "completed")
+  const shown = tab === "active" ? activeDeals : completedDeals
 
   return (
     <div className="flex flex-col h-full overflow-hidden px-6 pt-6 pb-6">
@@ -753,7 +764,7 @@ function MasterList({ onSelect }: { onSelect: (deal: WorkspaceDeal) => void }) {
 
       {/* Deal list */}
       <div className="flex-1 overflow-y-auto rounded-2xl border border-[#efefef] bg-white dark:border-white/10 dark:bg-[#111111] divide-y divide-[#f4f4f5] dark:divide-white/[0.06]">
-        {deals.length === 0 ? (
+        {shown.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4f4f5] dark:bg-white/5">
               <Zap className="h-5 w-5 text-gray-300 dark:text-white/20" />
@@ -768,7 +779,7 @@ function MasterList({ onSelect }: { onSelect: (deal: WorkspaceDeal) => void }) {
             </p>
           </div>
         ) : (
-          deals.map((deal) => (
+          shown.map((deal) => (
             <DealRow key={deal.id} deal={deal} onClick={() => onSelect(deal)} />
           ))
         )}
@@ -780,28 +791,32 @@ function MasterList({ onSelect }: { onSelect: (deal: WorkspaceDeal) => void }) {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function WorkspaceApp() {
-  const [selectedDeal, setSelectedDeal] = useState<WorkspaceDeal | null>(null)
+  const { refreshDeals } = useCampaigns()
+  const deals = useEnrichedDeals()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selectedDeal = deals.find((d) => d.id === selectedId) ?? null
 
   const openDeal = (deal: WorkspaceDeal) => {
-    setSelectedDeal(deal)
+    setSelectedId(deal.id)
     window.history.pushState({ modal: "workspace-deal" }, "")
   }
 
-  const closeDeal = () => {
+  const closeDeal = async () => {
+    await refreshDeals()
     if (window.history.state?.modal === "workspace-deal") {
       window.history.back()
     } else {
-      setSelectedDeal(null)
+      setSelectedId(null)
     }
   }
 
   useEffect(() => {
     const handlePopState = () => {
-      if (selectedDeal) setSelectedDeal(null)
+      if (selectedId) setSelectedId(null)
     }
     window.addEventListener("popstate", handlePopState)
     return () => window.removeEventListener("popstate", handlePopState)
-  }, [selectedDeal])
+  }, [selectedId])
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-[#0a0a0a]">

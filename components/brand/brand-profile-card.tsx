@@ -26,15 +26,15 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXTwitter, faInstagram, faYoutube } from "@fortawesome/free-brands-svg-icons";
 import type { BrandData } from "@/components/brand/brand-data";
 import { BrandEditorForm } from "@/components/brand/brand-editor-form";
+import { updateMyBrandAction } from "@/app/actions/brand";
 
-export function BrandProfileCard({ 
+export function BrandProfileCard({
   brand,
   isOwner = false,
-  onUpdate,
-}: { 
+}: {
   brand: BrandData
   isOwner?: boolean
-  onUpdate?: (updates: Partial<BrandData>) => void
+  brandId?: string
 }) {
   const router = useRouter();
   const [isTeamExpanded, setIsTeamExpanded] = useState(false);
@@ -55,9 +55,22 @@ export function BrandProfileCard({
     }
   };
 
-  const saveProfile = () => {
-    onUpdate?.({ ...draft, categories: draft.categories.filter(Boolean) });
+  const saveProfile = async (): Promise<boolean> => {
+    // Only name + website persist server-side today; the rest (bio,
+    // categories, socials, images) stay local draft state until the
+    // backend grows those fields.
+    const res = await updateMyBrandAction({
+      displayName: draft.name,
+      website: draft.website || null,
+    })
+    if (!res.success) {
+      toast.error(res.error)
+      return false
+    }
+    setDraft({ ...draft, categories: draft.categories.filter(Boolean) });
     setIsEditing(false);
+    router.refresh();
+    return true
   };
 
   // Simple determinism for banner gradient based on brand name length or ID
@@ -95,7 +108,7 @@ export function BrandProfileCard({
                         <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">
                           Cancel
                         </Button>
-                        <Button onPress={() => { saveProfile(); toast.success("Brand profile updated successfully!"); renderProps.close(); }}>
+                        <Button onPress={async () => { const ok = await saveProfile(); if (ok) { toast.success("Brand profile updated successfully!"); renderProps.close(); } }}>
                           Save changes
                         </Button>
                       </AlertDialog.Footer>

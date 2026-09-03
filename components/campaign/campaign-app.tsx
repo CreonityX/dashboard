@@ -54,6 +54,14 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useAccount } from "@/context/account-context"
 import { BrandCampaignApp } from "./brand-campaign-app"
+import {
+  applyToCampaignAction,
+  discoverCampaignsAction,
+  getDealsAction,
+  getMyApplicationsAction,
+} from "@/app/actions/campaign"
+import { getPublicBrandProfileAction } from "@/app/actions/brand"
+import type { Campaign as ApiCampaign } from "@/lib/api"
 
 type CampaignStatus = "Open" | "Closing Soon" | "Filled" | "Closed"
 type CampaignTab = "discover" | "pipeline" | "invitations"
@@ -1262,7 +1270,7 @@ const PIPELINE_THEMES: Record<string, { laneBg: string; headerBg: string; dot: s
   },
 };
 
-function PipelineView({ campaigns, onOpen }: { campaigns: Campaign[]; onOpen: (campaign: Campaign) => void }) {
+function PipelineView({ campaigns, pipelineDeals, onOpen }: { campaigns: Campaign[]; pipelineDeals: PipelineDeal[]; onOpen: (campaign: Campaign) => void }) {
   const columns = [
     { id: "bid", label: "Bid sent" },
     { id: "negotiation", label: "Negotiation" },
@@ -1277,7 +1285,7 @@ function PipelineView({ campaigns, onOpen }: { campaigns: Campaign[]; onOpen: (c
     <div className="overflow-x-auto pb-4">
       <div className="flex w-max gap-4">
         {columns.map((column) => {
-          const deals = PIPELINE_DEALS.filter((deal) => deal.stage === column.id)
+          const deals = pipelineDeals.filter((deal) => deal.stage === column.id)
           const theme = PIPELINE_THEMES[column.id]
           
           return (
@@ -1439,27 +1447,39 @@ function InvitationsView({ onOpen }: { onOpen: (campaign: Campaign) => void }) {
   )
 }
 
-function BidForm({ 
+function BidForm({
   campaign, readOnly = false,
-  collapsible, isExpanded = true, onToggle
-}: { 
+  collapsible, isExpanded = true, onToggle,
+  applied = false, onSubmitted,
+}: {
   campaign: Campaign, readOnly?: boolean;
   collapsible?: boolean; isExpanded?: boolean; onToggle?: () => void;
+  applied?: boolean; onSubmitted?: () => void;
 }) {
   const [pricingMode, setPricingMode] = useState<BidPricingMode>("deliverable")
   const [revisionRounds, setRevisionRounds] = useState("2")
   const [includeExclusivity, setIncludeExclusivity] = useState(false)
-  const [bidStatus, setBidStatus] = useState<"editing" | "sending" | "submitted">("editing")
+  const [pitch, setPitch] = useState("I can show the product in a realistic city-day routine with texture closeups, outdoor movement, and a clear callout around reapplication.")
+  const [packageTotal, setPackageTotal] = useState("2950")
+  const [bidStatus, setBidStatus] = useState<"editing" | "sending" | "submitted">(applied ? "submitted" : "editing")
 
   const inputCls = "h-12 w-full rounded-[14px] border border-[#e2e8f0] bg-white px-4 text-[14px] text-[#0a0a0a] outline-none transition focus:border-[#0060ff] focus:ring-2 focus:ring-[#0060ff]/10 dark:border-white/10 dark:bg-[#111111] dark:text-white"
   const labelCls = "mb-2 block text-[13.5px] font-medium text-[#334155] dark:text-gray-300"
 
-  const handleSend = () => {
+  const handleSend = async () => {
     setBidStatus("sending")
-    setTimeout(() => {
-      setBidStatus("submitted")
-      toast.success("Bid submitted successfully")
-    }, 1800)
+    const res = await applyToCampaignAction(campaign.id, {
+      proposedRate: packageTotal.replace(/[^\d.]/g, "") || "0",
+      pitch: pitch.slice(0, 2000),
+    })
+    if (!res.success) {
+      setBidStatus("editing")
+      toast.error(res.error)
+      return
+    }
+    setBidStatus("submitted")
+    toast.success("Bid submitted successfully")
+    onSubmitted?.()
   }
 
   if (bidStatus === "sending") {
@@ -1575,7 +1595,7 @@ function BidForm({
         ) : (
           <div>
             <label className={labelCls}>Package total</label>
-            <input defaultValue="₹2,950" className={inputCls} />
+            <input value={packageTotal} onChange={(e) => setPackageTotal(e.target.value)} className={inputCls} />
           </div>
         )}
 
@@ -1612,7 +1632,8 @@ function BidForm({
         <div>
           <label className={labelCls}>Pitch <span className="text-gray-400">· 150 words max</span></label>
           <textarea
-            defaultValue="I can show the product in a realistic city-day routine with texture closeups, outdoor movement, and a clear callout around reapplication."
+            value={pitch}
+            onChange={(e) => setPitch(e.target.value)}
             className="min-h-[110px] w-full resize-none rounded-[14px] border border-[#e2e8f0] bg-white px-4 py-3 text-[14px] leading-relaxed text-[#0a0a0a] outline-none transition focus:border-[#0060ff] focus:ring-2 focus:ring-[#0060ff]/10 dark:border-white/10 dark:bg-[#111111] dark:text-white"
           />
         </div>
@@ -1654,8 +1675,7 @@ function BidForm({
   )
 }
 
-function NegotiationThread({ campaign }: { campaign: Campaign }) {
-  const deal = PIPELINE_DEALS.find((item) => item.campaignId === campaign.id)
+function NegotiationThread({ campaign, deal }: { campaign: Campaign; deal?: PipelineDeal | null }) {
   if (!deal) return null
 
   return (
@@ -2562,18 +2582,23 @@ function CompletedView({ deal, campaign }: { deal: PipelineDeal; campaign: Campa
 function CampaignDetail({
   campaign,
   campaigns,
+  deal,
+  applied,
+  onApply,
   onBack,
   onOpen,
   onToggleSave,
 }: {
   campaign: Campaign
   campaigns: Campaign[]
+  deal?: PipelineDeal | null
+  applied?: boolean
+  onApply?: (campaignId: string) => void
   onBack: () => void
   onOpen: (campaign: Campaign) => void
   onToggleSave: () => void
 }) {
   const brandColors = useBrandColor(campaign.domain)
-  const deal = PIPELINE_DEALS.find((item) => item.campaignId === campaign.id)
   const hasDeal = !!deal
   const isContentStage = hasDeal && deal?.stage !== "bid" && deal?.stage !== "negotiation"
   const [isApplyingMobile, setIsApplyingMobile] = useState(false)
@@ -2859,7 +2884,7 @@ function CampaignDetail({
           ) : campaign.invited ? (
             <InvitationResponseForm campaign={campaign} />
           ) : (
-            <BidForm campaign={campaign} />
+            <BidForm campaign={campaign} applied={applied} onSubmitted={() => onApply?.(campaign.id)} />
           )}
         </div>
       </div>
@@ -3275,6 +3300,61 @@ export function CampaignApp() {
   return isBrand ? <BrandCampaignApp /> : <CreatorCampaignApp />
 }
 
+const moneyInr = (v: string) => `\u20B9${Number(v || 0).toLocaleString("en-IN")}`;
+
+function daysLeftOf(deadline: string | null): number {
+  if (!deadline) return 0;
+  return Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000));
+}
+
+function dueOf(deadline: string | null): string {
+  if (!deadline) return "";
+  return new Date(deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function domainOf(website: string | null): string {
+  if (!website) return "";
+  try {
+    return new URL(website.startsWith("http") ? website : `https://${website}`).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+/** Backend campaign → the rich UI Campaign the discover/detail views render. */
+function toUiCampaign(c: ApiCampaign, brandName: string, domain: string): Campaign {
+  const daysLeft = daysLeftOf(c.applicationDeadline);
+  return {
+    id: c.id,
+    brand: brandName,
+    domain,
+    title: c.title,
+    niche: c.nicheTags[0] ?? "",
+    location: "",
+    budget: moneyInr(c.budgetPerCreator),
+    daysLeft,
+    bids: 0,
+    dueDate: dueOf(c.applicationDeadline ?? c.campaignEndDate),
+    status: c.status === "active" ? (daysLeft <= 3 ? "Closing Soon" : "Open") : "Closed",
+    description: c.description,
+    deliverables: c.deliverables.map((d) => `${d.quantity}× ${d.description || d.type}`),
+    eligibility: [],
+    rights: { included: c.requirements ?? "", paid: "" },
+    brief: { summary: c.description, asset: "" },
+    qna: [],
+    similarIds: [],
+  };
+}
+
+function toPipelineStage(appStatus: string, dealStatus?: string): PipelineDeal["stage"] {
+  if (dealStatus === "completed") return "completed";
+  if (dealStatus === "approved" || dealStatus === "payment_pending" || dealStatus === "content_submitted") return "revision";
+  if (dealStatus === "active") return "content";
+  if (appStatus === "accepted") return "accepted";
+  if (appStatus === "shortlisted") return "negotiation";
+  return "bid";
+}
+
 function CreatorCampaignApp() {
   const searchParams = useSearchParams()
   const initialTab = (searchParams?.get("tab") as CampaignTab) || "discover"
@@ -3291,7 +3371,66 @@ function CreatorCampaignApp() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
   const [activePanel, setActivePanel] = useState<"filter" | "saved" | null>(null)
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null)
-  const [campaigns, setCampaigns] = useState([...CAMPAIGNS, ...INVITATION_CAMPAIGNS])
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [pipelineDeals, setPipelineDeals] = useState<PipelineDeal[]>([])
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set())
+  const [brandNames, setBrandNames] = useState<Record<string, { name: string; domain: string }>>({})
+
+  // Discover feed + my applications + deals, mapped onto UI shapes.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const [feed, apps, deals] = await Promise.all([
+        discoverCampaignsAction({}),
+        getMyApplicationsAction({}),
+        getDealsAction({}),
+      ])
+      if (cancelled || !feed.success) return
+      const items = feed.data.items
+      const byBrand = [...new Set(items.map((c) => c.brandAccountId))]
+      const profiles = await Promise.all(
+        byBrand.map(async (id) =>
+          getPublicBrandProfileAction(id).then((r) =>
+            r.success ? ([id, { name: r.data.displayName, domain: domainOf(r.data.website) }] as const) : null,
+          ),
+        ),
+      )
+      if (cancelled) return
+      const names: Record<string, { name: string; domain: string }> = {}
+      for (const p of profiles) if (p) names[p[0]] = p[1]
+      setBrandNames(names)
+      setCampaigns(items.map((c) => toUiCampaign(c, names[c.brandAccountId]?.name ?? "Brand", names[c.brandAccountId]?.domain ?? "")))
+      if (apps.success) {
+        setAppliedIds(new Set(apps.data.items.map((a) => a.campaignId)))
+        const dealByApp = new Map((deals.success ? deals.data.items : []).map((d) => [d.applicationId, d]))
+        setPipelineDeals(
+          apps.data.items.map((a) => {
+            const deal = dealByApp.get(a.id)
+            const camp = items.find((c) => c.id === a.campaignId)
+            return {
+              id: deal?.id ?? `app-${a.id}`,
+              campaignId: a.campaignId,
+              stage: toPipelineStage(a.status, deal?.status),
+              total: moneyInr(deal?.agreedRate ?? a.proposedRate),
+              due: "",
+              nextStep:
+                a.status === "pending"
+                  ? "Application under review"
+                  : a.status === "shortlisted"
+                    ? "Shortlisted — awaiting brand decision"
+                    : a.status === "accepted"
+                      ? "Accepted — see Workspace"
+                      : `Application ${a.status}`,
+              timeline: [],
+              messages: [],
+              campaignTitle: camp?.title ?? "",
+            } as unknown as PipelineDeal;
+          }),
+        )
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const selectedCampaign = useMemo(() => campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? null, [campaigns, selectedCampaignId])
   const openCampaign = (campaign: Campaign) => {
@@ -3325,7 +3464,7 @@ function CreatorCampaignApp() {
     <div className={cn("flex h-full w-full flex-col bg-white dark:bg-[#0a0a0a]", selectedCampaign ? "overflow-y-auto xl:overflow-hidden" : "overflow-y-auto")}>
       <div className={cn("flex w-full flex-col px-3 md:px-6 pt-4 md:pt-6 lg:pt-8", selectedCampaign ? "flex-1 pb-4 xl:min-h-0" : "pb-12")}>
         {selectedCampaign ? (
-          <CampaignDetail campaign={selectedCampaign} campaigns={campaigns} onBack={closeCampaign} onOpen={openCampaign} onToggleSave={() => toggleSave(selectedCampaign.id)} />
+          <CampaignDetail campaign={selectedCampaign} campaigns={campaigns} deal={pipelineDeals.find((d) => d.campaignId === selectedCampaign.id) ?? null} applied={appliedIds.has(selectedCampaign.id)} onApply={(id) => setAppliedIds((prev) => new Set(prev).add(id))} onBack={closeCampaign} onOpen={openCampaign} onToggleSave={() => toggleSave(selectedCampaign.id)} />
         ) : (
           <>
             <div className="mb-7 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -3378,7 +3517,7 @@ function CreatorCampaignApp() {
 
                 {activeTab === "discover" ? (
                   <DiscoverView campaigns={campaigns} selectedFilter={selectedFilter} isPanelOpen={!!activePanel} onFilter={setSelectedFilter} onOpen={openCampaign} />
-                ) : activeTab === "pipeline" ? <PipelineView campaigns={campaigns} onOpen={openCampaign} /> : activeTab === "invitations" ? <InvitationsView onOpen={openCampaign} /> : null}
+                ) : activeTab === "pipeline" ? <PipelineView campaigns={campaigns} pipelineDeals={pipelineDeals} onOpen={openCampaign} /> : activeTab === "invitations" ? <InvitationsView onOpen={openCampaign} /> : null}
               </div>
               
               <CampaignFilterPanel isOpen={activePanel === "filter"} onOpenChange={(open) => setActivePanel(open ? "filter" : null)} />
