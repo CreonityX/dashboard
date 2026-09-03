@@ -758,3 +758,154 @@ export function toUiCampaignStatus(s: CampaignStatus): UiCampaignStatus {
       return "archived";
   }
 }
+
+// ── Comms (creator side) ──────────────────────────────────────────────────────
+// Shapes mirror the Drizzle rows (camelCase). Lists are newest-first from
+// the API; the UI reverses for chronological display.
+
+export type CommChannel = {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  isPrivate: boolean;
+  isDefault: boolean;
+  createdBy: string;
+  archivedAt: string | null;
+  createdAt: string;
+};
+
+export type CommMessage = {
+  id: string;
+  channelId: string | null;
+  dmThreadId: string | null;
+  authorId: string;
+  body: string;
+  parentMessageId: string | null;
+  replyCount: number;
+  createdAt: string;
+  editedAt: string | null;
+  deletedAt: string | null;
+};
+
+export type DmThread = {
+  id: string;
+  workspaceId: string;
+  createdAt: string;
+  participants: Array<{ userId: string; email: string }>;
+};
+
+export type UnreadCounts = {
+  channels: Array<{ id: string; name: string; unreadCount: number }>;
+  dms: Array<{ id: string; unreadCount: number }>;
+};
+
+export async function listCommChannels(forwardCookies: string): Promise<CommChannel[]> {
+  return apiFetch<CommChannel[]>("/creator/comms/channels", { forwardCookies });
+}
+
+export async function createCommChannel(
+  payload: { name: string; description?: string; isPrivate?: boolean },
+  forwardCookies: string,
+): Promise<CommChannel> {
+  return apiFetch<CommChannel>("/creator/comms/channels", {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function listChannelMessages(
+  channelId: string,
+  params: { before?: string; limit?: number },
+  forwardCookies: string,
+): Promise<CommMessage[]> {
+  const qs = new URLSearchParams();
+  if (params.before) qs.set("before", params.before);
+  if (params.limit !== undefined) qs.set("limit", String(params.limit));
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return apiFetch<CommMessage[]>(`/creator/comms/channels/${channelId}/messages${suffix}`, {
+    forwardCookies,
+  });
+}
+
+export async function sendChannelMessage(
+  channelId: string,
+  payload: { body: string; parentMessageId?: string },
+  forwardCookies: string,
+): Promise<CommMessage> {
+  return apiFetch<CommMessage>(`/creator/comms/channels/${channelId}/messages`, {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function listDmThreads(forwardCookies: string): Promise<DmThread[]> {
+  return apiFetch<DmThread[]>("/creator/comms/dms", { forwardCookies });
+}
+
+export async function startDmThread(
+  userId: string,
+  forwardCookies: string,
+): Promise<DmThread> {
+  return apiFetch<DmThread>("/creator/comms/dms", {
+    method: "POST",
+    body: { userId },
+    forwardCookies,
+  });
+}
+
+export async function listDmMessages(
+  threadId: string,
+  params: { before?: string; limit?: number },
+  forwardCookies: string,
+): Promise<CommMessage[]> {
+  const qs = new URLSearchParams();
+  if (params.before) qs.set("before", params.before);
+  if (params.limit !== undefined) qs.set("limit", String(params.limit));
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return apiFetch<CommMessage[]>(`/creator/comms/dms/${threadId}/messages${suffix}`, {
+    forwardCookies,
+  });
+}
+
+export async function sendDmMessage(
+  threadId: string,
+  payload: { body: string },
+  forwardCookies: string,
+): Promise<CommMessage> {
+  return apiFetch<CommMessage>(`/creator/comms/dms/${threadId}/messages`, {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function getUnreadCounts(forwardCookies: string): Promise<UnreadCounts> {
+  return apiFetch<UnreadCounts>("/creator/comms/unread", { forwardCookies });
+}
+
+export async function markChannelRead(
+  channelId: string,
+  messageId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/channels/${channelId}/mark-read`, {
+    method: "POST",
+    body: { messageId },
+    forwardCookies,
+  });
+}
+
+export async function markDmRead(
+  threadId: string,
+  messageId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/dms/${threadId}/mark-read`, {
+    method: "POST",
+    body: { messageId },
+    forwardCookies,
+  });
+}

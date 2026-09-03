@@ -1,7 +1,21 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { conversations as seed, type Message } from "@/lib/messages-data"
+import { type Conversation, type Message } from "@/lib/messages-data"
+import { useAuth } from "@/context/auth-context"
+import { useRealtime, type RealtimeEvent } from "@/lib/realtime"
+import {
+  getChannelMessagesAction,
+  getCommChannelsAction,
+  getDmMessagesAction,
+  getDmThreadsAction,
+  getUnreadCountsAction,
+  markChannelReadAction,
+  markDmReadAction,
+  sendChannelMessageAction,
+  sendDmMessageAction,
+} from "@/app/actions/comms"
+import type { CommChannel, CommMessage, DmThread } from "@/lib/api"
 import { ConversationList } from "@/components/messages/conversation-list"
 import { ChatHeader } from "@/components/messages/chat-header"
 import { MessageItem } from "@/components/messages/message-item"
@@ -45,14 +59,166 @@ export function MessagesApp() {
   const activeConvoId = activeId ? activeId.split(":")[0] : null
   const activeChannelId = activeId ? activeId.split(":")[1] : null
 
-  const conversations = isBrand ? brandConversations : seed
+  // ── Creator live data (brand branch below is untouched) ──────────────────
+  const me = useAuth()
+  const [channels, setChannels] = useState<CommChannel[]>([])
+  const [threads, setThreads] = useState<DmThread[]>([])
+  const [liveMsgs, setLiveMsgs] = useState<Record<string, CommMessage[]>>({})
+  const [unread, setUnread] = useState<{ channels: Record<string, number>; dms: Record<string, number> }>({
+    channels: {},
+    dms: {},
+  })
+  const [onlineByUser, setOnlineByUser] = useState<Record<string, boolean>>({})
+  const [loaded, setLoaded] = useState<Set<string>>(new Set())
+
+  const toUiMessage = (row: CommMessage): Message => ({
+    id: row.id,
+    sender: row.authorId === me.id ? "me" : "them",
+    time: new Date(row.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+    kind: "text",
+    text: row.body,
+  })
+
+  const refreshUnread = async () => {
+    const res = await getUnreadCountsAction()
+    if (!res.success) return
+    setUnread({
+      channels: Object.fromEntries(res.data.channels.map((c) => [c.id, c.unreadCount])),
+      dms: Object.fromEntries(res.data.dms.map((d) => [d.id, d.unreadCount])),
+    })
+  }
+
+  // Initial load: channels + DM threads + unread counts.
+  useEffect(() => {
+    if (isBrand) return
+    let cancelled = false
+    void (async () => {
+      const [ch, dm] = await Promise.all([getCommChannelsAction(), getDmThreadsAction()])
+      if (cancelled) return
+      if (ch.success) setChannels(ch.data)
+      if (dm.success) setThreads(dm.data)
+      await refreshUnread()
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBrand])
+
+  const workspaceId = channels[0]?.workspaceId ?? null
+
+  const loadMessages = async (convoId: string, channelId?: string | null) => {
+    const key = channelId ? `ch:${channelId}` : convoId
+    if (loaded.has(key)) return
+    if (channelId) {
+      const res = await getChannelMessagesAction(channelId, { limit: 50 })
+      if (!res.success) return
+      const rows = [...res.data].reverse()
+      setLiveMsgs((prev) => ({ ...prev, [key]: rows }))
+      setLoaded((prev) => new Set(prev).add(key))
+      const latest = rows[rows.length - 1]
+      if (latest) void markChannelReadAction(channelId, latest.id)
+    } else if (convoId.startsWith("dm:")) {
+      const threadId = convoId.slice(3)
+      const res = await getDmMessagesAction(threadId, { limit: 50 })
+      if (!res.success) return
+      const rows = [...res.data].reverse()
+      setLiveMsgs((prev) => ({ ...prev, [key]: rows }))
+      setLoaded((prev) => new Set(prev).add(key))
+      const latest = rows[rows.length - 1]
+      if (latest) void markDmReadAction(threadId, latest.id)
+    }
+    void refreshUnread()
+  }
+
+  // Live updates from the workspace socket.
+  const handleRealtime = (event: RealtimeEvent) => {
+    if (event.type === "message.created" && (event.channelId || event.dmThreadId)) {
+      const row: CommMessage = {
+        id: event.messageId as string,
+        channelId: (event.channelId as string) ?? null,
+        dmThreadId: (event.dmThreadId as string) ?? null,
+        authorId: event.authorId as string,
+        body: event.body as string,
+        parentMessageId: (event.parentMessageId as string) ?? null,
+        replyCount: 0,
+        createdAt: event.createdAt as string,
+        editedAt: null,
+        deletedAt: null,
+      }
+      const key = event.channelId ? `ch:${event.channelId}` : `dm:${event.dmThreadId}`
+      setLiveMsgs((prev) => {
+        const cur = prev[key] ?? []
+        if (cur.some((m) => m.id === row.id)) return prev
+        return { ...prev, [key]: [...cur, row] }
+      })
+      void refreshUnread()
+    } else if (event.type === "typing.start" || event.type === "typing.stop") {
+      const key = `${workspaceId}:${event.channelId}`
+      setTyping((prev) => ({ ...prev, [key]: event.type === "typing.start" }))
+    } else if (event.type === "user.presence") {
+      setOnlineByUser((prev) => ({ ...prev, [event.userId as string]: event.status === "online" }))
+    } else if (event.type === "channel.updated") {
+      void (async () => {
+        const res = await getCommChannelsAction()
+        if (res.success) setChannels(res.data)
+      })()
+    }
+  }
+  const { sendTyping } = useRealtime(isBrand ? null : workspaceId, handleRealtime)
+
+  const creatorConversations: Conversation[] = !isBrand
+    ? [
+        ...(channels.length
+          ? [
+              {
+                id: workspaceId ?? "workspace",
+                name: `${me.name ?? "My"} Workspace`,
+                handle: "",
+                tone: "gray",
+                type: "community",
+                role: "admin",
+                channels: channels.map((ch: { id: string; name: string; unread?: number }) => ({
+                  id: ch.id,
+                  name: ch.name,
+                  unread: unread.channels[ch.id] ?? 0,
+                  messages: (liveMsgs[`ch:${ch.id}`] ?? []).map(toUiMessage),
+                })),
+                members: [],
+                preview: "",
+                time: "",
+                unread: Object.values(unread.channels).reduce((n, c) => n + c, 0),
+                messages: [],
+              } as Conversation,
+            ]
+          : []),
+        ...threads.map((t) => {
+          const other = t.participants.find((x) => x.userId !== me.id)
+          const label = other ? other.email.split("@")[0] ?? other.email : "Direct message"
+          const msgs = (liveMsgs[`dm:${t.id}`] ?? []).map(toUiMessage)
+          const last = msgs[msgs.length - 1]
+          return {
+            id: `dm:${t.id}`,
+            name: label,
+            handle: other?.email ?? "",
+            tone: "blue",
+            type: "dm",
+            online: other ? (onlineByUser[other.userId] ?? false) : false,
+            preview: last && last.kind === "text" ? last.text : "",
+            time: last?.time ?? "",
+            unread: unread.dms[t.id] ?? 0,
+            messages: msgs,
+          } as Conversation
+        }),
+      ]
+    : []
+
+  const conversations = isBrand ? brandConversations : creatorConversations
   const conversation = useMemo(
     () => (activeConvoId ? conversations.find((c) => c.id === activeConvoId) ?? null : null),
     [activeConvoId, conversations],
   )
 
   const activeChannel = useMemo(
-    () => (activeChannelId && conversation?.channels ? conversation.channels.find(ch => ch.id === activeChannelId) : null),
+    () => (activeChannelId && conversation?.channels ? conversation.channels.find((ch: { id: string }) => ch.id === activeChannelId) : null),
     [activeChannelId, conversation]
   )
 
@@ -74,6 +240,41 @@ export function MessagesApp() {
 
   function handleSend(text: string) {
     if (!activeId) return
+    sendTyping(activeChannelId ?? "", false)
+    // Creator branch: persist via the API. The socket fan-out echoes
+    // the row back (including to this client), which merges it in —
+    // but we also append immediately so empty states resolve fast.
+    if (!isBrand) {
+      void (async () => {
+        const parentId =
+          replyingTo &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(replyingTo.id)
+            ? replyingTo.id
+            : undefined
+        const res = activeChannelId
+          ? await sendChannelMessageAction(activeChannelId, {
+              body: text,
+              ...(parentId ? { parentMessageId: parentId } : {}),
+            })
+          : activeConvoId?.startsWith("dm:")
+            ? await sendDmMessageAction(activeConvoId.slice(3), text)
+            : null
+        if (!res) return
+        if (!res.success) {
+          toast.error(res.error)
+          return
+        }
+        const key = activeChannelId ? `ch:${activeChannelId}` : activeId
+        setLiveMsgs((prev) => {
+          const cur = prev[key] ?? []
+          if (cur.some((m) => m.id === res.data.id)) return prev
+          return { ...prev, [key]: [...cur, res.data] }
+        })
+        setLoaded((prev) => new Set(prev).add(key))
+        setReplyingTo(null)
+      })()
+      return
+    }
     const now = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
     const message: Message = {
       id: `${activeId}-${Date.now()}`, sender: "me", time: now, kind: "text", text, replyTo: replyingTo || undefined,
@@ -146,6 +347,10 @@ export function MessagesApp() {
     setActiveId(id)
     setMobileView("chat")
     setShowInfo(false)
+    if (!isBrand && id && id !== "create-workspace" && id !== "create-group") {
+      const [convoId, channelId] = id.split(":")
+      void loadMessages(convoId, channelId ?? null)
+    }
   }
 
   return (
@@ -225,6 +430,11 @@ export function MessagesApp() {
               onSend={handleSend}
               replyingTo={replyingTo}
               onCancelReply={() => setReplyingTo(null)}
+              onTypingChange={
+                !isBrand && activeChannelId
+                  ? (typing) => sendTyping(activeChannelId, typing)
+                  : undefined
+              }
             />
           </>
         )}

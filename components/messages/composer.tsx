@@ -28,14 +28,16 @@ const ATTACH_ITEMS: AttachItem[] = [
   { id: "schedule", label: "Schedule", icon: Calendar },
 ]
 
-export function Composer({ 
+export function Composer({
   onSend,
   replyingTo,
-  onCancelReply
-}: { 
+  onCancelReply,
+  onTypingChange,
+}: {
   onSend: (text: string) => void
   replyingTo?: any
   onCancelReply?: () => void
+  onTypingChange?: (typing: boolean) => void
 }) {
   const [value, setValue] = useState("")
 
@@ -44,6 +46,7 @@ export function Composer({
     if (!text) return
     onSend(text)
     setValue("")
+    onTypingChange?.(false)
     toast.success("Message sent")
   }
 
@@ -98,7 +101,7 @@ export function Composer({
           aria-label="Message"
           placeholder="Message..."
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => { setValue(e.target.value); onTypingChange?.(e.target.value.length > 0) }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault()
