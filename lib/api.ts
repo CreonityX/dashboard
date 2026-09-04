@@ -736,6 +736,222 @@ export async function cancelDeal(
   });
 }
 
+// ── Creator insights ──────────────────────────────────────────────────────────
+// Shapes mirror the OpenAPI responses in
+// backend/src/modules/creator/routes/insights.route.ts.
+
+export type InsightsOverview = {
+  totalFollowers: number;
+  followerGrowthPct: number | null;
+  avgEngagementRate: number | null;
+  estimatedReach: number;
+  topPlatform: string | null;
+  dealCount: number;
+  totalEarnings: number;
+  earningsGrowthPct: number | null;
+};
+
+export type PlatformBreakdown = {
+  platform: string;
+  followerCount: number | null;
+  followerDelta: number | null;
+  engagementRate: number | null;
+  avgViews: number | null;
+  topPost: { title: string | null; url: string | null; views: number | null } | null;
+};
+
+export type ContentMetric = {
+  id: string;
+  socialAccountId: string;
+  platformPostId: string;
+  postType: string;
+  publishedAt: string | null;
+  title: string | null;
+  url: string | null;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  saves: number | null;
+  reach: number | null;
+  impressions: number | null;
+  watchTimeSeconds: number | null;
+  engagementRate: number | null;
+  campaignId: string | null;
+  campaignName: string | null;
+};
+
+export type ContentPage = {
+  items: ContentMetric[];
+  pagination: { nextCursor: string | null };
+};
+
+export type AudienceDemographics = {
+  platform: string;
+  snapshotDate: string;
+  ageRange: Record<string, unknown> | null;
+  gender: Record<string, unknown> | null;
+  topCountries: Record<string, unknown> | null;
+  topCities: Record<string, unknown> | null;
+} | null;
+
+export type GrowthSeries = {
+  platform: string;
+  metric: string;
+  series: Array<{ date: string; value: number | null }>;
+};
+
+export type Benchmarks = {
+  niche: string;
+  platforms: Array<{ platform: string; creator: unknown; niche: unknown }>;
+};
+
+export type DealPerformance = {
+  deals: Array<{
+    dealId: string;
+    campaignId: string;
+    campaignTitle: string;
+    brandAccountId: string;
+    agreedRate: string;
+    status: string;
+    contentSubmittedAt: string | null;
+    approvedAt: string | null;
+    contentUrl: string | null;
+    views: number | null;
+    likes: number | null;
+    comments: number | null;
+    shares: number | null;
+    engagementRate: number | null;
+  }>;
+};
+
+export type DateRange = { from?: string; to?: string };
+
+function rangeQs(params: Record<string, string | number | undefined>): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined) qs.set(k, String(v));
+  }
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return suffix;
+}
+
+export async function getInsightsOverview(
+  params: DateRange,
+  forwardCookies: string,
+): Promise<InsightsOverview> {
+  return apiFetch<InsightsOverview>(`/creator/insights/overview${rangeQs(params)}`, {
+    forwardCookies,
+  });
+}
+
+export async function getInsightsPlatforms(
+  params: DateRange,
+  forwardCookies: string,
+): Promise<PlatformBreakdown[]> {
+  return apiFetch<PlatformBreakdown[]>(`/creator/insights/platforms${rangeQs(params)}`, {
+    forwardCookies,
+  });
+}
+
+export async function getInsightsContent(
+  params: {
+    platform?: string;
+    from?: string;
+    to?: string;
+    sort?: "views" | "likes" | "engagement_rate" | "published_at";
+    cursor?: string;
+    limit?: number;
+  },
+  forwardCookies: string,
+): Promise<ContentPage> {
+  return apiFetch<ContentPage>(`/creator/insights/content${rangeQs(params)}`, { forwardCookies });
+}
+
+export async function getInsightsAudience(
+  platform: string,
+  forwardCookies: string,
+): Promise<AudienceDemographics> {
+  return apiFetch<AudienceDemographics>(
+    `/creator/insights/audience${rangeQs({ platform })}`,
+    { forwardCookies },
+  );
+}
+
+export async function getInsightsGrowthChart(
+  params: {
+    platform: string;
+    metric: "followers" | "engagement" | "reach" | "impressions";
+    from?: string;
+    to?: string;
+  },
+  forwardCookies: string,
+): Promise<GrowthSeries> {
+  return apiFetch<GrowthSeries>(`/creator/insights/growth-chart${rangeQs(params)}`, {
+    forwardCookies,
+  });
+}
+
+export async function getInsightsBenchmarks(
+  niche: string,
+  forwardCookies: string,
+): Promise<Benchmarks> {
+  return apiFetch<Benchmarks>(`/creator/insights/benchmarks${rangeQs({ niche })}`, {
+    forwardCookies,
+  });
+}
+
+export async function getInsightsDealPerformance(
+  forwardCookies: string,
+): Promise<DealPerformance> {
+  return apiFetch<DealPerformance>("/creator/insights/deal-performance", { forwardCookies });
+}
+
+// ── Brand analytics overview ──────────────────────────────────────────────────
+// Shape mirrors backend/src/modules/brand/routes/analytics.route.ts.
+
+export type BrandAnalyticsCampaign = {
+  id: string;
+  title: string;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  creatorIds: string[];
+  deliverables: { completed: number; total: number };
+  reach: number;
+  impressions: number;
+  engagements: number;
+  clicks: number;
+  conversions: number;
+};
+
+export type BrandAnalyticsCreator = {
+  id: string;
+  displayName: string;
+  username: string;
+  campaignIds: string[];
+  deliverables: { completed: number; total: number };
+  reach: number;
+  impressions: number;
+  engagements: number;
+  clicks: number;
+  conversions: number;
+  attributedValue: number;
+};
+
+export type BrandAnalyticsOverview = {
+  campaigns: BrandAnalyticsCampaign[];
+  creators: BrandAnalyticsCreator[];
+  platformShare: Array<{ platform: string; share: number }>;
+  weeklyReach: number[];
+};
+
+export async function getBrandAnalyticsOverview(
+  forwardCookies: string,
+): Promise<BrandAnalyticsOverview> {
+  return apiFetch<BrandAnalyticsOverview>("/brand/analytics/overview", { forwardCookies });
+}
+
 // ── UI status mapping ─────────────────────────────────────────────────────────
 // The frontend's BrandCampaign type uses live|planning|completed|archived|
 // paused; the backend uses draft|active|paused|closed|completed|cancelled.

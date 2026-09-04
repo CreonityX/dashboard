@@ -97,3 +97,158 @@ export function formatAnalyticsNumber(value: number) {
   if (value >= 1000) return `${(value / 1000).toFixed(value >= 100000 ? 0 : 1)}K`
   return value.toLocaleString("en-IN")
 }
+
+/**
+ * Wire shapes — match the backend's BrandAnalyticsOverview exactly.
+ * Used by the analytics context to feed the existing UI (which keeps its
+ * own BrandAnalyticsCampaign/BrandAnalyticsCreator types). The mapping
+ * from wire → UI is done at the call site in the analytics context.
+ */
+export type WireBrandAnalyticsCampaign = {
+  id: string;
+  title: string;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  creatorIds: string[];
+  deliverables: { completed: number; total: number };
+  reach: number;
+  impressions: number;
+  engagements: number;
+  clicks: number;
+  conversions: number;
+};
+
+export type WireBrandAnalyticsCreator = {
+  id: string;
+  displayName: string;
+  username: string;
+  campaignIds: string[];
+  deliverables: { completed: number; total: number };
+  reach: number;
+  impressions: number;
+  engagements: number;
+  clicks: number;
+  conversions: number;
+  attributedValue: number;
+};
+
+export type WireBrandAnalyticsOverview = {
+  campaigns: WireBrandAnalyticsCampaign[];
+  creators: WireBrandAnalyticsCreator[];
+  platformShare: Array<{ platform: string; share: number }>;
+  weeklyReach: number[];
+};
+
+/**
+ * Convert the wire shape (backend) into the UI shape the existing
+ * BrandAnalyticsApp / components consume. Adds an `AvatarUrl` placeholder
+ * and splits the totals evenly across the available platforms when
+ * platformShare is empty (the UI displays per-platform bars; an empty
+ * share record would render zero-width bars).
+ */
+function pickPlatformKeys(shares: ReadonlyArray<{ platform: string; share: number }>): BrandAnalyticsPlatform[] {
+  const allowed: BrandAnalyticsPlatform[] = ["Instagram", "TikTok", "YouTube"]
+  const fromApi = shares
+    .map((s) => s.platform)
+    .filter((p): p is BrandAnalyticsPlatform => (allowed as string[]).includes(p))
+  if (fromApi.length) return fromApi
+  return allowed
+}
+
+function distributeEvenly<T extends string>(keys: T[]): Record<T, number> {
+  const out = Object.fromEntries(keys.map((k) => [k, 0])) as Record<T, number>
+  return out
+}
+
+function synthesizeWeeklyReach(got: number[]): number[] {
+  if (got.length === 7) return got
+  // 7-day template; if backend returned a partial week, pad with zeros
+  const out = [0, 0, 0, 0, 0, 0, 0]
+  for (let i = 0; i < Math.min(got.length, 7); i++) out[i] = got[i] ?? 0
+  return out
+}
+
+export function wireToUiCampaigns(
+  wire: WireBrandAnalyticsOverview,
+): BrandAnalyticsCampaign[] {
+  return wire.campaigns.map((c) => {
+    const platforms = pickPlatformKeys(wire.platformShare)
+    const shareSum = platforms.reduce((acc, p) => acc + (wire.platformShare.find((s) => s.platform === p)?.share ?? 0), 0)
+    const platformShare: Record<BrandAnalyticsPlatform, number> = distributeEvenly(platforms)
+    if (shareSum > 0) {
+      // Approximate the per-platform split by re-using the share % of
+      // totals (reach / impressions / engagements) so the bars line up.
+      const ratio = (p: BrandAnalyticsPlatform) =>
+        ((wire.platformShare.find((s) => s.platform === p)?.share ?? 0) / shareSum) || 0
+      const apply = (n: number) => (k: BrandAnalyticsPlatform) => Math.round(n * ratio(k))
+      const distribute = (n: number) => {
+        const out: Record<BrandAnalyticsPlatform, number> = distributeEvenly(platforms)
+        for (const p of platforms) (out as Record<string, number>)[p] = apply(n)(p)
+        return out
+      }
+      return {
+        id: c.id,
+        name: c.title,
+        status:
+          c.status === "active"
+            ? "Live"
+            : c.status === "completed"
+              ? "Completed"
+              : c.status === "paused"
+                ? "Planning"
+                : "Planning",
+        dates: [c.startDate, c.endDate].filter(Boolean).join(" – ") || "—",
+        creatorIds: c.creatorIds,
+        deliverables: c.deliverables,
+        reach: c.reach,
+        impressions: c.impressions,
+        engagements: c.engagements,
+        clicks: c.clicks,
+        conversions: c.conversions,
+        platformShare: distribute(c.reach) as Record<BrandAnalyticsPlatform, number>,
+        weeklyReach: synthesizeWeeklyReach([]),
+      }
+    }
+    // No platformShare yet → leave zeros; UI shows empty bars.
+    void shareSum
+    return {
+      id: c.id,
+      name: c.title,
+      status:
+        c.status === "active"
+          ? "Live"
+          : c.status === "completed"
+            ? "Completed"
+            : "Planning",
+      dates: [c.startDate, c.endDate].filter(Boolean).join(" – ") || "—",
+      creatorIds: c.creatorIds,
+      deliverables: c.deliverables,
+      reach: c.reach,
+      impressions: c.impressions,
+      engagements: c.engagements,
+      clicks: c.clicks,
+      conversions: c.conversions,
+      platformShare,
+      weeklyReach: synthesizeWeeklyReach([]),
+    }
+  })
+}
+
+export function wireToUiCreators(wire: WireBrandAnalyticsOverview): BrandAnalyticsCreator[] {
+  return wire.creators.map((c) => ({
+    id: c.id,
+    name: c.displayName,
+    handle: c.username,
+    avatarUrl: "",
+    campaignIds: c.campaignIds,
+    deliverables: c.deliverables,
+    reach: c.reach,
+    impressions: c.impressions,
+    engagements: c.engagements,
+    clicks: c.clicks,
+    conversions: c.conversions,
+    attributedValue: c.attributedValue,
+    platformShare: distributeEvenly(pickPlatformKeys(wire.platformShare)),
+  }))
+}
