@@ -1,8 +1,10 @@
+import type { AvatarTone } from "@/components/messages/gradient-avatar"
+
 export type NotificationCategory = "offers" | "finance" | "analytics" | "campaigns" | "mentions"
 
 export type Actor = {
   name: string
-  avatarTone?: string // blue, purple, etc.
+  avatarTone?: AvatarTone
 }
 
 export type Notification = {

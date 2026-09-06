@@ -98,7 +98,7 @@ function Row({
 }
 
 export function DesktopSidebar({ activeId: propActiveId }: { activeId?: string }) {
-  const { account, brand, signOut } = useAccount()
+  const { account, brand, isBrand, signOut } = useAccount()
   const pathname = usePathname()
   
   let activeId = propActiveId
@@ -312,7 +312,7 @@ export function DesktopSidebar({ activeId: propActiveId }: { activeId?: string }
           ))}
         </div>
 
-        <NotificationsList filter={notificationFilter} />
+        <NotificationsList filter={notificationFilter} accountType={isBrand ? "brand" : "creator"} />
       </div>
     </>
   )

@@ -1,13 +1,93 @@
-import { notificationsData } from "@/lib/notifications-data"
+"use client"
+
+import { useEffect, useState, useTransition } from "react"
+import { notificationsData, type NotificationGroup } from "@/lib/notifications-data"
 import { GradientAvatar } from "@/components/messages/gradient-avatar"
 import { ChartColumn, CircleDollar, FileText } from "@gravity-ui/icons"
 import { toast, Typography } from "@heroui/react"
 import { cn } from "@/lib/utils"
+import {
+  listCreatorNotificationsAction,
+  listBrandNotificationsAction,
+  markCreatorNotificationReadAction,
+  markBrandNotificationReadAction,
+} from "@/app/actions/notifications"
+import { notificationsToGroups } from "@/lib/notification-adapter"
 
-export function NotificationsList({ filter = "all" }: { filter?: "all" | string }) {
+type Props = {
+  filter?: "all" | string
+  /**
+   * Which endpoint tree to call. Defaults to creator. The desktop
+   * sidebar picks creator or brand based on the active account.
+   */
+  accountType?: "creator" | "brand"
+}
+
+/**
+ * Notifications inbox. The visual layout (gradient avatar, time, action
+ * sentence, right-side badge / icon) is unchanged from the mock-driven
+ * version. The data source used to be the static `notificationsData`;
+ * it now comes from the backend via the notifications server actions,
+ * with the adapter in `lib/notification-adapter.ts` converting the
+ * wire shape to the `NotificationGroup[]` the existing UI consumes.
+ *
+ * Marking a notification as read is wired to the existing "Mark as
+ * read" badge button — the click handler now also calls the backend.
+ */
+export function NotificationsList({ filter = "all", accountType = "creator" }: Props) {
+  const [groups, setGroups] = useState<NotificationGroup[]>(notificationsData)
+  const [error, setError] = useState<string | null>(null)
+  const [, startTransition] = useTransition()
+
+  const list =
+    accountType === "brand" ? listBrandNotificationsAction : listCreatorNotificationsAction
+  const markRead =
+    accountType === "brand" ? markBrandNotificationReadAction : markCreatorNotificationReadAction
+
+  // Load on mount + when the account tree changes. The page is short
+  // enough that fetching everything and filtering in JS is fine.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const r = await list({ limit: 50 })
+      if (cancelled) return
+      if (r.success) {
+        setGroups(notificationsToGroups(r.data))
+        setError(null)
+      } else {
+        setError(r.error)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [accountType, list])
+
+  function onMarkRead(id: string) {
+    startTransition(async () => {
+      const r = await markRead(id)
+      if (!r.success) {
+        setError(r.error)
+        return
+      }
+      // Optimistic local update — mark the row read in the in-memory list.
+      setGroups((prev) =>
+        prev.map((g) => ({
+          ...g,
+          items: g.items.map((it) => (it.id === id ? { ...it, isUnread: false } : it)),
+        })),
+      )
+    })
+  }
+
   return (
     <div className="flex-1 overflow-y-auto px-6 pb-20 pt-2 flex flex-col gap-6 w-full">
-      {notificationsData.map(group => {
+      {error ? (
+        <Typography type="body-sm" className="text-[#a1a1aa] dark:text-[#737373]">
+          {error}
+        </Typography>
+      ) : null}
+      {groups.map(group => {
         const filteredItems = filter === "all" 
           ? group.items 
           : group.items.filter(i => i.category === filter)
@@ -68,20 +148,27 @@ export function NotificationsList({ filter = "all" }: { filter?: "all" | string 
                       {item.rightElement.type === "thumbnail" && (
                         <div className={cn("h-11 w-11 rounded-lg", item.rightElement.colorClass)} />
                       )}
-                      {item.rightElement.type === "badge" && (
-                        <button 
-                          className={cn("rounded-lg px-3 py-1.5 text-[12px] font-bold transition-transform hover:scale-105", item.rightElement.bgClass, item.rightElement.textClass)}
-                          onClick={() => {
-                            let badgeMsg = `${item.rightElement!.text} action completed.`
-                            if (item.rightElement!.text === "Review") badgeMsg = "Review submitted successfully."
-                            if (item.rightElement!.text === "Pay") badgeMsg = "Payment processed successfully."
-                            if (item.rightElement!.text === "Mark as read") badgeMsg = "Notification marked as read."
-                            toast.success("Status Updated", { description: badgeMsg })
-                          }}
-                        >
-                          {item.rightElement.text}
-                        </button>
-                      )}
+                      {item.rightElement.type === "badge" && (() => {
+                        const badge = item.rightElement
+                        if (badge.type !== "badge") return null
+                        return (
+                          <button 
+                            className={cn("rounded-lg px-3 py-1.5 text-[12px] font-bold transition-transform hover:scale-105", badge.bgClass, badge.textClass)}
+                            onClick={() => {
+                              let badgeMsg = `${badge.text} action completed.`
+                              if (badge.text === "Review") badgeMsg = "Review submitted successfully."
+                              if (badge.text === "Pay") badgeMsg = "Payment processed successfully."
+                              if (badge.text === "Mark as read") {
+                                badgeMsg = "Notification marked as read."
+                                onMarkRead(item.id)
+                              }
+                              toast.success("Status Updated", { description: badgeMsg })
+                            }}
+                          >
+                            {badge.text}
+                          </button>
+                        )
+                      })()}
                       {item.rightElement.type === "icon" && (
                         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f4f4f5] dark:bg-[#1f1f1f]">
                           {item.rightElement.name === "chart" && <ChartColumn className="h-5 w-5 text-[#737373] dark:text-[#a1a1aa]" />}

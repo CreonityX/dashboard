@@ -1338,3 +1338,146 @@ export async function cancelWorkflowInstance(
     forwardCookies,
   });
 }
+
+// ── Notifications ────────────────────────────────────────────────────────────
+
+export type NotificationKind =
+  | "application_received"
+  | "application_accepted"
+  | "application_rejected"
+  | "deal_content_submitted"
+  | "deal_approved"
+  | "deal_cancelled"
+  | "message_received"
+  | "channel_invite"
+  | "workflow_step"
+  | "payment_released"
+  | "social_sync_completed"
+  | "social_sync_failed"
+  | "system";
+
+export type Notification = {
+  id: string;
+  accountType: "brand" | "creator";
+  accountId: string;
+  actorUserId: string | null;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  referenceType: string | null;
+  referenceId: string | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export async function listNotifications(
+  params: { unreadOnly?: boolean; limit?: number; cursor?: string } = {},
+  forwardCookies?: string,
+): Promise<Notification[]> {
+  const qs = new URLSearchParams();
+  if (params.unreadOnly) qs.set("unreadOnly", "true");
+  if (params.limit !== undefined) qs.set("limit", String(params.limit));
+  if (params.cursor) qs.set("cursor", params.cursor);
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  // The /me endpoint is the same prefix for both account types;
+  // the route decides creator vs brand from the bearer token's
+  // accountType claim. We hit /creator/notifications as a default
+  // when the server-rendered page knows the account type, and the
+  // page will pass the right base. For now, callers pick the path.
+  return apiFetch<Notification[]>(
+    `/creator/notifications${suffix}`,
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function listBrandNotifications(
+  params: { unreadOnly?: boolean; limit?: number; cursor?: string } = {},
+  forwardCookies?: string,
+): Promise<Notification[]> {
+  const qs = new URLSearchParams();
+  if (params.unreadOnly) qs.set("unreadOnly", "true");
+  if (params.limit !== undefined) qs.set("limit", String(params.limit));
+  if (params.cursor) qs.set("cursor", params.cursor);
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return apiFetch<Notification[]>(
+    `/brand/notifications${suffix}`,
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function getUnreadCount(
+  forwardCookies?: string,
+): Promise<{ count: number }> {
+  return apiFetch<{ count: number }>(
+    "/creator/notifications/unread-count",
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function getBrandUnreadCount(
+  forwardCookies?: string,
+): Promise<{ count: number }> {
+  return apiFetch<{ count: number }>(
+    "/brand/notifications/unread-count",
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function markNotificationRead(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/notifications/${id}/read`, {
+    method: "PATCH",
+    forwardCookies,
+  });
+}
+
+export async function markBrandNotificationRead(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/brand/notifications/${id}/read`, {
+    method: "PATCH",
+    forwardCookies,
+  });
+}
+
+export async function markAllNotificationsRead(
+  forwardCookies: string,
+): Promise<{ updated: number }> {
+  return apiFetch<{ updated: number }>("/creator/notifications/mark-all-read", {
+    method: "POST",
+    forwardCookies,
+  });
+}
+
+export async function markAllBrandNotificationsRead(
+  forwardCookies: string,
+): Promise<{ updated: number }> {
+  return apiFetch<{ updated: number }>("/brand/notifications/mark-all-read", {
+    method: "POST",
+    forwardCookies,
+  });
+}
+
+export async function deleteNotification(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/notifications/${id}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
+
+export async function deleteBrandNotification(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/brand/notifications/${id}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
