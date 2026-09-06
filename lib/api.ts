@@ -1159,3 +1159,182 @@ export async function markDmRead(
     forwardCookies,
   });
 }
+
+
+// ── Workflows ────────────────────────────────────────────────────────────────
+
+export type WorkflowStepType =
+  | "notify"
+  | "assign"
+  | "approval"
+  | "condition"
+  | "webhook"
+  | "wait"
+  | "create_task"
+  | "send_message";
+
+export type WorkflowStepDefinition = {
+  type: WorkflowStepType;
+  label?: string;
+  config: Record<string, unknown>;
+};
+
+export type WorkflowTriggerType =
+  | "manual"
+  | "campaign_created"
+  | "content_submitted"
+  | "deal_closed"
+  | "custom";
+
+export type WorkflowTemplate = {
+  id: string;
+  creatorAccountId: string | null;
+  name: string;
+  description: string | null;
+  triggerType: WorkflowTriggerType;
+  steps: WorkflowStepDefinition[];
+  isActive: boolean;
+  version: number;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkflowInstanceStatus =
+  | "pending"
+  | "in_progress"
+  | "waiting_approval"
+  | "completed"
+  | "cancelled"
+  | "failed";
+
+export type WorkflowStepStatus =
+  | "pending"
+  | "in_progress"
+  | "approved"
+  | "rejected"
+  | "skipped"
+  | "failed";
+
+export type WorkflowReferenceType =
+  | "campaign"
+  | "content"
+  | "deal"
+  | "task"
+  | "custom";
+
+export type WorkflowStepExecution = {
+  id: string;
+  instanceId: string;
+  stepIndex: number;
+  stepType: WorkflowStepType;
+  stepConfig: Record<string, unknown>;
+  assignedTo: string | null;
+  status: WorkflowStepStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+  approvedBy: string | null;
+  rejectionReason: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type WorkflowInstance = {
+  id: string;
+  templateId: string;
+  creatorAccountId: string;
+  referenceType: WorkflowReferenceType;
+  referenceId: string;
+  status: WorkflowInstanceStatus;
+  currentStepIndex: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  cancelledBy: string | null;
+  triggeredBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkflowInstanceWithSteps = WorkflowInstance & {
+  steps: WorkflowStepExecution[];
+};
+
+export async function listWorkflowTemplates(forwardCookies?: string): Promise<WorkflowTemplate[]> {
+  return apiFetch<WorkflowTemplate[]>("/creator/workflows/templates", forwardCookies ? { forwardCookies } : {});
+}
+
+export async function getWorkflowTemplate(id: string, forwardCookies?: string): Promise<WorkflowTemplate> {
+  return apiFetch<WorkflowTemplate>(`/creator/workflows/templates/${id}`, forwardCookies ? { forwardCookies } : {});
+}
+
+export async function createWorkflowTemplate(
+  payload: {
+    name: string;
+    description?: string;
+    triggerType?: WorkflowTriggerType;
+    steps: WorkflowStepDefinition[];
+  },
+  forwardCookies: string,
+): Promise<WorkflowTemplate> {
+  return apiFetch<WorkflowTemplate>("/creator/workflows/templates", {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function startWorkflow(
+  payload: {
+    templateId: string;
+    referenceType: WorkflowReferenceType;
+    referenceId: string;
+  },
+  forwardCookies: string,
+): Promise<WorkflowInstance> {
+  return apiFetch<WorkflowInstance>("/creator/workflows/start", {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function listWorkflowInstances(
+  params: { status?: WorkflowInstanceStatus; referenceType?: WorkflowReferenceType; limit?: number } = {},
+  forwardCookies?: string,
+): Promise<WorkflowInstance[]> {
+  const qs = new URLSearchParams();
+  if (params.status) qs.set("status", params.status);
+  if (params.referenceType) qs.set("referenceType", params.referenceType);
+  if (params.limit !== undefined) qs.set("limit", String(params.limit));
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return apiFetch<WorkflowInstance[]>(`/creator/workflows/instances${suffix}`, forwardCookies ? { forwardCookies } : {});
+}
+
+export async function getWorkflowInstance(
+  id: string,
+  forwardCookies?: string,
+): Promise<WorkflowInstanceWithSteps> {
+  return apiFetch<WorkflowInstanceWithSteps>(`/creator/workflows/instances/${id}`, forwardCookies ? { forwardCookies } : {});
+}
+
+export async function approveWorkflowStep(
+  id: string,
+  payload: { stepIndex: number; approved: boolean; rejectionReason?: string },
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/workflows/instances/${id}/approve-step`, {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function cancelWorkflowInstance(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/workflows/instances/${id}/cancel`, {
+    method: "POST",
+    forwardCookies,
+  });
+}
