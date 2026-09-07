@@ -1481,3 +1481,165 @@ export async function deleteBrandNotification(
     forwardCookies,
   });
 }
+
+// ── Calendar ────────────────────────────────────────────────────────────────
+
+export type CalendarEventType =
+  | "post"
+  | "campaign"
+  | "deadline"
+  | "meeting"
+  | "shoot"
+  | "review"
+  | "approval"
+  | "payment"
+  | "personal";
+
+export type CalendarPlatform =
+  | "instagram"
+  | "youtube"
+  | "tiktok"
+  | "twitter"
+  | "linkedin";
+
+export type CalendarPriority = "low" | "medium" | "high";
+
+export type CalendarEvent = {
+  id: string;
+  accountType: "brand" | "creator";
+  accountId: string;
+  title: string;
+  type: CalendarEventType;
+  startDate: string;
+  endDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  allDay: boolean;
+  description: string | null;
+  platform: CalendarPlatform | null;
+  brand: string | null;
+  campaign: string | null;
+  creator: string | null;
+  assignee: string | null;
+  priority: CalendarPriority | null;
+  completed: boolean;
+  reminder: string | null;
+  tags: string[];
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function listCreatorCalendar(
+  params: { from?: string; to?: string; type?: CalendarEventType } = {},
+  forwardCookies?: string,
+): Promise<CalendarEvent[]> {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  if (params.type) qs.set("type", params.type);
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return apiFetch<CalendarEvent[]>(
+    `/creator/calendar${suffix}`,
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function listBrandCalendar(
+  params: { from?: string; to?: string; type?: CalendarEventType } = {},
+  forwardCookies?: string,
+): Promise<CalendarEvent[]> {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  if (params.type) qs.set("type", params.type);
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return apiFetch<CalendarEvent[]>(
+    `/brand/calendar${suffix}`,
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function createCalendarEvent(
+  payload: {
+    title: string;
+    type: CalendarEventType;
+    startDate: string;
+    endDate?: string;
+    startTime?: string;
+    endTime?: string;
+    allDay?: boolean;
+    description?: string;
+    platform?: CalendarPlatform;
+    brand?: string;
+    campaign?: string;
+    creator?: string;
+    assignee?: string;
+    priority?: CalendarPriority;
+    completed?: boolean;
+    reminder?: string;
+    tags?: string[];
+  },
+  forwardCookies: string,
+): Promise<CalendarEvent> {
+  return apiFetch<CalendarEvent>("/creator/calendar", {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function createBrandCalendarEvent(
+  payload: Parameters<typeof createCalendarEvent>[0],
+  forwardCookies: string,
+): Promise<CalendarEvent> {
+  return apiFetch<CalendarEvent>("/brand/calendar", {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function updateCalendarEvent(
+  id: string,
+  payload: Partial<Parameters<typeof createCalendarEvent>[0]>,
+  forwardCookies: string,
+): Promise<CalendarEvent> {
+  return apiFetch<CalendarEvent>(`/creator/calendar/${id}`, {
+    method: "PATCH",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function updateBrandCalendarEvent(
+  id: string,
+  payload: Partial<Parameters<typeof createCalendarEvent>[0]>,
+  forwardCookies: string,
+): Promise<CalendarEvent> {
+  return apiFetch<CalendarEvent>(`/brand/calendar/${id}`, {
+    method: "PATCH",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function deleteCalendarEvent(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/calendar/${id}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
+
+export async function deleteBrandCalendarEvent(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/brand/calendar/${id}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
