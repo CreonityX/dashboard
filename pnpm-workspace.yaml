@@ -1,0 +1,8 @@
+allowBuilds:
+  '@heroui-pro/react': true
+  '@heroui/shared-utils': true
+  '@zowe/secrets-for-zowe-sdk': true
+  esbuild: true
+  msw: true
+  sharp: true
+  workerd: true

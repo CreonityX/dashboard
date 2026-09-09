@@ -51,13 +51,13 @@ async function authed<T>(
 
 // ── List ─────────────────────────────────────────────────────────────────────
 
-export function listCreatorNotificationsAction(
+export async function listCreatorNotificationsAction(
   params: { unreadOnly?: boolean; limit?: number } = {},
 ): Promise<ActionResult<Notification[]>> {
   return authed((c) => apiCreatorList(params, c));
 }
 
-export function listBrandNotificationsAction(
+export async function listBrandNotificationsAction(
   params: { unreadOnly?: boolean; limit?: number } = {},
 ): Promise<ActionResult<Notification[]>> {
   return authed((c) => apiBrandList(params, c));
@@ -65,13 +65,13 @@ export function listBrandNotificationsAction(
 
 // ── Unread count (bell badge) ────────────────────────────────────────────────
 
-export function getCreatorUnreadCountAction(): Promise<
+export async function getCreatorUnreadCountAction(): Promise<
   ActionResult<{ count: number }>
 > {
   return authed((c) => apiCreatorUnread(c));
 }
 
-export function getBrandUnreadCountAction(): Promise<
+export async function getBrandUnreadCountAction(): Promise<
   ActionResult<{ count: number }>
 > {
   return authed((c) => apiBrandUnread(c));
@@ -79,37 +79,37 @@ export function getBrandUnreadCountAction(): Promise<
 
 // ── Mark read / delete ───────────────────────────────────────────────────────
 
-export function markCreatorNotificationReadAction(
+export async function markCreatorNotificationReadAction(
   id: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiCreatorRead(id, c));
 }
 
-export function markBrandNotificationReadAction(
+export async function markBrandNotificationReadAction(
   id: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiBrandRead(id, c));
 }
 
-export function markAllCreatorNotificationsReadAction(): Promise<
+export async function markAllCreatorNotificationsReadAction(): Promise<
   ActionResult<{ updated: number }>
 > {
   return authed((c) => apiCreatorMarkAll(c));
 }
 
-export function markAllBrandNotificationsReadAction(): Promise<
+export async function markAllBrandNotificationsReadAction(): Promise<
   ActionResult<{ updated: number }>
 > {
   return authed((c) => apiBrandMarkAll(c));
 }
 
-export function deleteCreatorNotificationAction(
+export async function deleteCreatorNotificationAction(
   id: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiCreatorDelete(id, c));
 }
 
-export function deleteBrandNotificationAction(
+export async function deleteBrandNotificationAction(
   id: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiBrandDelete(id, c));

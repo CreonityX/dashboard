@@ -48,21 +48,21 @@ async function authed<T>(fn: (cookies: string) => Promise<T>): Promise<ActionRes
 
 // ── Creator insights ──────────────────────────────────────────────────────────
 
-export function getInsightsOverviewAction(params: {
+export async function getInsightsOverviewAction(params: {
   from?: string;
   to?: string;
 }): Promise<ActionResult<InsightsOverview>> {
   return authed((c) => apiOverview(params, c))
 }
 
-export function getInsightsPlatformsAction(params: {
+export async function getInsightsPlatformsAction(params: {
   from?: string;
   to?: string;
 }): Promise<ActionResult<PlatformBreakdown[]>> {
   return authed((c) => apiPlatforms(params, c))
 }
 
-export function getInsightsContentAction(params: {
+export async function getInsightsContentAction(params: {
   platform?: string;
   from?: string;
   to?: string;
@@ -73,13 +73,13 @@ export function getInsightsContentAction(params: {
   return authed((c) => apiContent(params, c))
 }
 
-export function getInsightsAudienceAction(
+export async function getInsightsAudienceAction(
   platform: string,
 ): Promise<ActionResult<AudienceDemographics>> {
   return authed((c) => apiAudience(platform, c))
 }
 
-export function getInsightsGrowthChartAction(params: {
+export async function getInsightsGrowthChartAction(params: {
   platform: string;
   metric: "followers" | "engagement" | "reach" | "impressions";
   from?: string;
@@ -88,19 +88,19 @@ export function getInsightsGrowthChartAction(params: {
   return authed((c) => apiGrowthChart(params, c))
 }
 
-export function getInsightsBenchmarksAction(
+export async function getInsightsBenchmarksAction(
   niche: string,
 ): Promise<ActionResult<Benchmarks>> {
   return authed((c) => apiBenchmarks(niche, c))
 }
 
-export function getInsightsDealPerformanceAction(): Promise<ActionResult<DealPerformance>> {
+export async function getInsightsDealPerformanceAction(): Promise<ActionResult<DealPerformance>> {
   return authed((c) => apiDealPerformance(c))
 }
 
 // ── Brand analytics ───────────────────────────────────────────────────────────
 
-export function getBrandAnalyticsOverviewAction(): Promise<
+export async function getBrandAnalyticsOverviewAction(): Promise<
   ActionResult<BrandAnalyticsOverview>
 > {
   return authed((c) => apiBrandOverview(c))

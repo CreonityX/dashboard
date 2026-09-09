@@ -47,19 +47,19 @@ async function authed<T>(
   }
 }
 
-export function listWorkflowTemplatesAction(): Promise<
+export async function listWorkflowTemplatesAction(): Promise<
   ActionResult<WorkflowTemplate[]>
 > {
   return authed((c) => apiTemplates(c));
 }
 
-export function getWorkflowInstanceAction(
+export async function getWorkflowInstanceAction(
   id: string,
 ): Promise<ActionResult<WorkflowInstanceWithSteps>> {
   return authed((c) => apiGet(id, c));
 }
 
-export function listWorkflowInstancesAction(
+export async function listWorkflowInstancesAction(
   params: {
     status?: WorkflowInstanceStatus;
     referenceType?: WorkflowReferenceType;
@@ -69,7 +69,7 @@ export function listWorkflowInstancesAction(
   return authed((c) => apiList(params, c));
 }
 
-export function startWorkflowAction(payload: {
+export async function startWorkflowAction(payload: {
   templateId: string;
   referenceType: WorkflowReferenceType;
   referenceId: string;
@@ -77,20 +77,20 @@ export function startWorkflowAction(payload: {
   return authed((c) => apiStart(payload, c));
 }
 
-export function approveWorkflowStepAction(
+export async function approveWorkflowStepAction(
   instanceId: string,
   payload: { stepIndex: number; approved: boolean; rejectionReason?: string },
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiApprove(instanceId, payload, c));
 }
 
-export function cancelWorkflowInstanceAction(
+export async function cancelWorkflowInstanceAction(
   instanceId: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiCancel(instanceId, c));
 }
 
-export function createWorkflowTemplateAction(payload: {
+export async function createWorkflowTemplateAction(payload: {
   name: string;
   description?: string;
   triggerType?: WorkflowTriggerType;

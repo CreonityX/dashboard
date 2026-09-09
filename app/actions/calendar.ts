@@ -47,13 +47,13 @@ async function authed<T>(
 
 // ── List ─────────────────────────────────────────────────────────────────────
 
-export function listCreatorCalendarAction(
+export async function listCreatorCalendarAction(
   params: { from?: string; to?: string; type?: CalendarEventType } = {},
 ): Promise<ActionResult<CalendarEvent[]>> {
   return authed((c) => apiCreatorList(params, c));
 }
 
-export function listBrandCalendarAction(
+export async function listBrandCalendarAction(
   params: { from?: string; to?: string; type?: CalendarEventType } = {},
 ): Promise<ActionResult<CalendarEvent[]>> {
   return authed((c) => apiBrandList(params, c));
@@ -81,39 +81,39 @@ export type CalendarEventPayload = {
   tags?: string[];
 };
 
-export function createCreatorCalendarEventAction(
+export async function createCreatorCalendarEventAction(
   payload: CalendarEventPayload,
 ): Promise<ActionResult<CalendarEvent>> {
   return authed((c) => apiCreatorCreate(payload, c));
 }
 
-export function createBrandCalendarEventAction(
+export async function createBrandCalendarEventAction(
   payload: CalendarEventPayload,
 ): Promise<ActionResult<CalendarEvent>> {
   return authed((c) => apiBrandCreate(payload, c));
 }
 
-export function updateCreatorCalendarEventAction(
+export async function updateCreatorCalendarEventAction(
   id: string,
   payload: Partial<CalendarEventPayload>,
 ): Promise<ActionResult<CalendarEvent>> {
   return authed((c) => apiCreatorUpdate(id, payload, c));
 }
 
-export function updateBrandCalendarEventAction(
+export async function updateBrandCalendarEventAction(
   id: string,
   payload: Partial<CalendarEventPayload>,
 ): Promise<ActionResult<CalendarEvent>> {
   return authed((c) => apiBrandUpdate(id, payload, c));
 }
 
-export function deleteCreatorCalendarEventAction(
+export async function deleteCreatorCalendarEventAction(
   id: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiCreatorDelete(id, c));
 }
 
-export function deleteBrandCalendarEventAction(
+export async function deleteBrandCalendarEventAction(
   id: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiBrandDelete(id, c));

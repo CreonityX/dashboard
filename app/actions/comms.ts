@@ -59,11 +59,11 @@ export async function getWsTokenAction(): Promise<ActionResult<{ token: string }
 
 // ── Channels ──────────────────────────────────────────────────────────────────
 
-export function getCommChannelsAction(): Promise<ActionResult<CommChannel[]>> {
+export async function getCommChannelsAction(): Promise<ActionResult<CommChannel[]>> {
   return authed((c) => apiListCommChannels(c))
 }
 
-export function createCommChannelAction(payload: {
+export async function createCommChannelAction(payload: {
   name: string;
   description?: string;
   isPrivate?: boolean;
@@ -71,21 +71,21 @@ export function createCommChannelAction(payload: {
   return authed((c) => apiCreateCommChannel(payload, c))
 }
 
-export function getChannelMessagesAction(
+export async function getChannelMessagesAction(
   channelId: string,
   params: { before?: string; limit?: number } = {},
 ): Promise<ActionResult<CommMessage[]>> {
   return authed((c) => apiListChannelMessages(channelId, params, c))
 }
 
-export function sendChannelMessageAction(
+export async function sendChannelMessageAction(
   channelId: string,
   payload: { body: string; parentMessageId?: string },
 ): Promise<ActionResult<CommMessage>> {
   return authed((c) => apiSendChannelMessage(channelId, payload, c))
 }
 
-export function markChannelReadAction(
+export async function markChannelReadAction(
   channelId: string,
   messageId: string,
 ): Promise<ActionResult<{ message: string }>> {
@@ -94,29 +94,29 @@ export function markChannelReadAction(
 
 // ── DMs ───────────────────────────────────────────────────────────────────────
 
-export function getDmThreadsAction(): Promise<ActionResult<DmThread[]>> {
+export async function getDmThreadsAction(): Promise<ActionResult<DmThread[]>> {
   return authed((c) => apiListDmThreads(c))
 }
 
-export function startDmThreadAction(userId: string): Promise<ActionResult<DmThread>> {
+export async function startDmThreadAction(userId: string): Promise<ActionResult<DmThread>> {
   return authed((c) => apiStartDmThread(userId, c))
 }
 
-export function getDmMessagesAction(
+export async function getDmMessagesAction(
   threadId: string,
   params: { before?: string; limit?: number } = {},
 ): Promise<ActionResult<CommMessage[]>> {
   return authed((c) => apiListDmMessages(threadId, params, c))
 }
 
-export function sendDmMessageAction(
+export async function sendDmMessageAction(
   threadId: string,
   body: string,
 ): Promise<ActionResult<CommMessage>> {
   return authed((c) => apiSendDmMessage(threadId, { body }, c))
 }
 
-export function markDmReadAction(
+export async function markDmReadAction(
   threadId: string,
   messageId: string,
 ): Promise<ActionResult<{ message: string }>> {
@@ -125,6 +125,6 @@ export function markDmReadAction(
 
 // ── Unread ────────────────────────────────────────────────────────────────────
 
-export function getUnreadCountsAction(): Promise<ActionResult<UnreadCounts>> {
+export async function getUnreadCountsAction(): Promise<ActionResult<UnreadCounts>> {
   return authed((c) => apiGetUnreadCounts(c))
 }
