@@ -2,7 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"main": ".open-next/worker.js",
 	"name": "dashboard",
-	"vars": { "INTERNAL_API_BASE": "https://creonity-api.onrender.com" },
+	"vars": { "INTERNAL_API_BASE": "https://api.creonity.com" },
 	"compatibility_date": "2026-07-16",
 	"compatibility_flags": [
 		"nodejs_compat",
