@@ -32,6 +32,8 @@ jobs:
 
       - name: Build (OpenNext Cloudflare)
         run: pnpm exec opennextjs-cloudflare build
+        env:
+          NEXT_PUBLIC_API_BASE: https://creonity-api.onrender.com
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
