@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers"
 import {
   ApiCallError,
   login as apiLogin,
+  me as apiMe,
   logout as apiLogout,
   mfaChallenge as apiMfaChallenge,
   mfaSetup as apiMfaSetup,
@@ -229,5 +230,18 @@ export async function mfaDisableAction(password: string, code: string): Promise<
       return { success: false, error: err.status === 422 ? "Invalid code or password. Please try again." : err.message }
     }
     return { success: false, error: "Unable to reach the server. Please try again." }
+  }
+}
+
+// ── MFA status ──────────────────────────────────────────────────────────────
+
+export async function getMfaStatusAction(): Promise<{ mfa_enabled: boolean } | null> {
+  try {
+    const cookiesHeader = await getCookieHeader()
+    if (!cookiesHeader) return null
+    const me = await apiMe(cookiesHeader)
+    return { mfa_enabled: me.mfa_enabled }
+  } catch {
+    return null
   }
 }

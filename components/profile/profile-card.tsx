@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { createPortal } from "react-dom";
 import { Button, Dropdown, ScrollShadow, AlertDialog, toast, Popover, ListBox } from "@heroui/react"
 import { useProfile, ProfileData } from "@/context/profile-context";
+import { saveProfileBasicsAction, uploadAvatarAction } from "@/app/actions/onboarding";
+import { toast as sonnerToast } from "sonner";
 import { ProfileEditorForm } from "@/components/profile/profile-editor-form";
 import { ProfileMediaHeader } from "@/components/profile/profile-media-header";
 import { BrandLogo } from "@/components/ui/brand-logo";
@@ -90,17 +92,46 @@ export function ProfileCard({
     }
   }, [isEditing, profile]);
 
-  const handleSave = () => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async (): Promise<boolean> => {
+    if (saving) return false;
+    setSaving(true);
+    const username = editData.name
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 30);
+    const r = await saveProfileBasicsAction({
+      displayName: editData.name.trim() || "Creator",
+      username: username.length >= 3 ? username : `creator_${Date.now().toString(36)}`,
+      bio: editData.about?.slice(0, 500) || undefined,
+      tagline: editData.tagline?.slice(0, 150) || undefined,
+    });
+    setSaving(false);
+    if (!r.success) {
+      sonnerToast.error(r.error);
+      return false;
+    }
     setProfile(editData);
     setIsEditing(false);
+    return true;
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "coverImage" | "avatar") => {
     const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setEditData(prev => ({ ...prev, [field]: url }));
+    if (!file) return;
+    if (field === "avatar") {
+      const fd = new FormData();
+      fd.append("file", file);
+      void uploadAvatarAction(fd).then((r) => {
+        if (r.success) setEditData((prev) => ({ ...prev, avatar: r.data.avatarUrl }));
+        else sonnerToast.error(r.error);
+      });
+      return;
     }
+    const url = URL.createObjectURL(file);
+    setEditData((prev) => ({ ...prev, [field]: url }));
   };
 
   useEffect(() => {
@@ -144,7 +175,7 @@ export function ProfileCard({
                         <Button slot="close" variant="tertiary" className="!text-[#0a0a0a] dark:!text-white font-medium">
                           Cancel
                         </Button>
-                        <Button onPress={() => { handleSave(); toast.success("Profile updated successfully!"); renderProps.close(); }}>
+                        <Button onPress={() => { void handleSave().then((ok) => { if (ok) { toast.success("Profile updated successfully!"); renderProps.close(); } }); }}>
                           Save changes
                         </Button>
                       </AlertDialog.Footer>
@@ -262,7 +293,7 @@ export function ProfileCard({
         <ProfileEditorForm 
           value={editData} 
           onChange={setEditData} 
-          onSubmit={() => { handleSave(); toast.success("Profile updated successfully!"); }}
+          onSubmit={() => { void handleSave().then((ok) => { if (ok) toast.success("Profile updated successfully!"); }); }}
         />
       ) : (
         <>

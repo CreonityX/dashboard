@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Icon } from "@iconify/react"
 import type { ReactNode } from "react"
 import { Switch, Button, Dropdown } from "@heroui/react"
 import { toast } from "sonner"
+import { getMfaStatusAction, mfaSetupAction, mfaVerifyAction, mfaDisableAction } from "@/app/actions/auth"
 
 export function BlueSwitch({ 
   defaultSelected, 
@@ -91,6 +92,64 @@ export function SecurityView({ onBack }: { onBack?: () => void }) {
   const [isAuthDisableModalOpen, setIsAuthDisableModalOpen] = useState(false);
   const [isSMSDisableModalOpen, setIsSMSDisableModalOpen] = useState(false);
   const [isAuthEnabled, setIsAuthEnabled] = useState(false);
+  const [authCode, setAuthCode] = useState("");
+  const [setupSecret, setSetupSecret] = useState<string | null>(null);
+  const [showSecret, setShowSecret] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [disablePassword, setDisablePassword] = useState("");
+  const [disableCode, setDisableCode] = useState("");
+
+  useEffect(() => {
+    void getMfaStatusAction().then((r) => {
+      if (r) setIsAuthEnabled(r.mfa_enabled);
+    });
+  }, []);
+
+  async function openAuthSetup() {
+    setAuthCode("");
+    setShowSecret(false);
+    setIsAuthModalOpen(true);
+    if (setupSecret) return;
+    const r = await mfaSetupAction();
+    if (r.success) setSetupSecret(r.data.secret);
+    else toast.error(r.error);
+  }
+
+  async function verifyAuthCode() {
+    if (verifying) return;
+    if (authCode.length < 6) {
+      toast.error("Enter the 6-digit code from your authenticator app.");
+      return;
+    }
+    setVerifying(true);
+    const r = await mfaVerifyAction(authCode);
+    setVerifying(false);
+    if (r.success) {
+      setIsAuthEnabled(true);
+      setIsAuthModalOpen(false);
+      setAuthCode("");
+      toast.success("Authenticator app connected.");
+    } else {
+      toast.error(r.error);
+    }
+  }
+
+  async function disableMfa() {
+    if (!disablePassword || disableCode.length < 6) {
+      toast.error("Enter your password and the 6-digit code.");
+      return;
+    }
+    const r = await mfaDisableAction(disablePassword, disableCode);
+    if (r.success) {
+      setIsAuthEnabled(false);
+      setIsAuthDisableModalOpen(false);
+      setDisablePassword("");
+      setDisableCode("");
+      toast.success("Authenticator app removed.");
+    } else {
+      toast.error(r.error);
+    }
+  }
   const [isSMSEnabled, setIsSMSEnabled] = useState(false);
   const [isSMSCodeSent, setIsSMSCodeSent] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -256,7 +315,7 @@ export function SecurityView({ onBack }: { onBack?: () => void }) {
               className="flex items-center justify-between px-6 py-4 min-h-[72px] border-b border-[#f4f4f5] dark:border-[#1f1f1f] last:border-0 gap-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors"
               onClick={() => {
                 if (isAuthEnabled) setIsAuthDisableModalOpen(true);
-                else setIsAuthModalOpen(true);
+                else void openAuthSetup();
               }}
             >
               <div className="flex flex-col gap-0.5 pointer-events-none">
@@ -323,12 +382,9 @@ export function SecurityView({ onBack }: { onBack?: () => void }) {
       {/* MODALS */}
       <SecurityModal 
         isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+        onClose={() => setIsAuthModalOpen(false)}
         title="Connect your authenticator app"
-        onVerify={() => {
-          setIsAuthEnabled(true);
-          setIsAuthModalOpen(false);
-        }}
+        onVerify={() => { void verifyAuthCode(); }}
       >
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-3">
@@ -339,14 +395,17 @@ export function SecurityView({ onBack }: { onBack?: () => void }) {
               <div className="bg-white dark:bg-[#1c1c1c] p-6 rounded-3xl border border-[#e4e4e7] dark:border-[#2a2a2a] flex items-center justify-center shadow-sm">
                 <Icon icon="ph:qr-code-bold" className="size-48 text-[#0a0a0a] dark:text-white" />
               </div>
-              <button className="mt-6 text-[14px] text-sky-500 hover:text-sky-600 font-medium hover:underline transition-colors">Trouble scanning?</button>
+              <button onClick={() => setShowSecret((v) => !v)} className="mt-6 text-[14px] text-sky-500 hover:text-sky-600 font-medium hover:underline transition-colors">Trouble scanning?</button>
+              {showSecret && setupSecret && (
+                <p className="mt-3 break-all rounded-xl bg-gray-50 dark:bg-white/5 p-3 text-center text-[13px] font-mono text-[#0a0a0a] dark:text-white">{setupSecret}</p>
+              )}
             </div>
           </div>
           <div className="flex flex-col gap-3">
             <p className="text-[14px] text-[#0a0a0a] dark:text-[#eaeaea] leading-relaxed">
               <span className="font-bold">Step 2:</span> Enter your 6-digit code
             </p>
-            <OTPInput />
+            <OTPInput value={authCode} onChange={setAuthCode} />
           </div>
         </div>
       </SecurityModal>
@@ -426,15 +485,20 @@ export function SecurityView({ onBack }: { onBack?: () => void }) {
         title="Remove Authenticator App?"
         primaryActionText="Remove"
         isDanger={true}
-        onVerify={() => {
-          setIsAuthEnabled(false);
-          setIsAuthDisableModalOpen(false);
-        }}
+        onVerify={() => { void disableMfa(); }}
       >
         <div className="flex flex-col gap-3">
           <p className="text-[14px] text-[#0a0a0a] dark:text-[#eaeaea] leading-relaxed">
-            Are you sure you want to remove your authenticator app? This will lower the security of your account and you will rely on other methods to sign in.
+            Confirm with your password and a code from the app to remove it.
           </p>
+          <input
+            type="password"
+            placeholder="Account password"
+            value={disablePassword}
+            onChange={(e) => setDisablePassword(e.target.value)}
+            className="h-12 rounded-xl border border-[#e4e4e7] dark:border-[#2a2a2a] bg-transparent px-4 text-[15px] text-[#0a0a0a] dark:text-white outline-none placeholder-[#a1a1aa] focus:border-[#0a0a0a] dark:focus:border-white transition-colors"
+          />
+          <OTPInput value={disableCode} onChange={setDisableCode} />
         </div>
       </SecurityModal>
 
@@ -495,14 +559,23 @@ function SessionRow({
   )
 }
 
-function OTPInput({ length = 6 }: { length?: number }) {
+function OTPInput({ length = 6, value, onChange }: { length?: number; value?: string; onChange?: (code: string) => void }) {
+  const chars = (value ?? "").padEnd(length, " ").slice(0, length).split("");
   return (
     <div className="flex items-center gap-2">
       {Array.from({ length }).map((_, i) => (
         <input
           key={i}
           type="text"
+          inputMode="numeric"
           maxLength={1}
+          value={value === undefined ? undefined : chars[i] === " " ? "" : chars[i]}
+          onChange={value === undefined || !onChange ? undefined : (e) => {
+            const d = e.target.value.replace(/\D/g, "").slice(-1);
+            const next = chars.slice();
+            next[i] = d || " ";
+            onChange(next.join("").trim());
+          }}
           className="w-11 h-12 sm:w-12 sm:h-14 text-center text-[20px] font-bold bg-transparent border border-[#e4e4e7] dark:border-[#2a2a2a] focus:border-[#0a0a0a] dark:focus:border-white rounded-xl outline-none transition-colors text-[#0a0a0a] dark:text-white"
         />
       ))}
