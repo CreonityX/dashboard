@@ -1,16 +1,17 @@
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
-import { DesktopSidebar } from "@/components/desktop-sidebar"
-import { MobileShell } from "@/components/mobile-shell"
-import { WorkspaceApp } from "@/components/workspace/workspace-app"
-import { Suspense } from "react"
-import { listDeals as apiListDeals, me as apiMe } from "@/lib/api"
-import { CampaignsProvider } from "@/context/campaigns-context"
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { DesktopSidebar } from "@/components/desktop-sidebar";
+import { MobileShell } from "@/components/mobile-shell";
+import { WorkspaceViews } from "@/components/workspace/workspace-views";
+import { Suspense } from "react";
+import { listDeals as apiListDeals, me as apiMe } from "@/lib/api";
+import { CampaignsProvider } from "@/context/campaigns-context";
 
 export const metadata = {
   title: "Workspace | Creonity",
-  description: "All your confirmed deals — delivering from contract to final payment.",
-}
+  description:
+    "All your confirmed deals — delivering from contract to final payment.",
+};
 
 /**
  * Server component. The workspace is the deals view — seed
@@ -19,22 +20,25 @@ export const metadata = {
  * pulls it via actions only if needed.
  */
 export default async function WorkspacePage() {
-  const jar = await cookies()
-  const cookieHeader = jar.getAll().map((c) => `${c.name}=${c.value}`).join("; ")
-  if (!cookieHeader) redirect("/login")
+  const jar = await cookies();
+  const cookieHeader = jar
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+  if (!cookieHeader) redirect("/login");
 
   try {
-    await apiMe(cookieHeader)
+    await apiMe(cookieHeader);
   } catch {
-    redirect("/login")
+    redirect("/login");
   }
 
   const deals = await apiListDeals({}, cookieHeader).catch(() => ({
     items: [],
     nextCursor: null,
-  }))
+  }));
 
-  const initial = { campaigns: { items: [], nextCursor: null }, deals }
+  const initial = { campaigns: { items: [], nextCursor: null }, deals };
 
   return (
     <main className="flex h-[100dvh] w-full flex-col overflow-hidden bg-white dark:bg-[#0a0a0a]">
@@ -45,7 +49,7 @@ export default async function WorkspacePage() {
         <MobileShell>
           <Suspense fallback={<div className="p-4">Loading workspace...</div>}>
             <CampaignsProvider initial={initial}>
-              <WorkspaceApp />
+              <WorkspaceViews />
             </CampaignsProvider>
           </Suspense>
         </MobileShell>
@@ -55,10 +59,10 @@ export default async function WorkspacePage() {
       <div className="hidden lg:flex flex-1 pl-[88px] min-h-0">
         <Suspense fallback={<div className="p-4">Loading workspace...</div>}>
           <CampaignsProvider initial={initial}>
-            <WorkspaceApp />
+            <WorkspaceViews />
           </CampaignsProvider>
         </Suspense>
       </div>
     </main>
-  )
+  );
 }

@@ -1927,3 +1927,128 @@ export async function requestCreatorWithdrawal(
     forwardCookies,
   });
 }
+
+// ── Workspace projects + tasks (kanban) ──────────────────────────────────────
+
+export type WsLane =
+  "todo" | "in_progress" | "in_review" | "approved" | "blocked";
+export type WsPriority = "low" | "medium" | "high" | "urgent";
+
+export type WsProject = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  campaignId: string | null;
+  createdAt: string;
+};
+
+export type WsTask = {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string | null;
+  assignedTo: string | null;
+  dueAt: string | null;
+  priority: WsPriority;
+  lane: WsLane;
+  orderIndex: number;
+  tags: string[];
+  attachmentsCount: number;
+  commentsCount: number;
+  createdAt: string;
+};
+
+export type WsComment = {
+  id: string;
+  taskId: string;
+  authorUserId: string;
+  body: string;
+  createdAt: string;
+};
+
+export type WsLanes = Record<WsLane, WsTask[]>;
+
+export async function listWsProjects(
+  forwardCookies?: string,
+): Promise<WsProject[]> {
+  return apiFetch<WsProject[]>(
+    `/creator/workspace/projects`,
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function createWsProject(
+  input: { name: string; description?: string },
+  forwardCookies: string,
+): Promise<WsProject> {
+  return apiFetch<WsProject>(`/creator/workspace/projects`, {
+    method: "POST",
+    body: input,
+    forwardCookies,
+  });
+}
+
+export async function listWsTasksByLane(
+  projectId: string,
+  forwardCookies?: string,
+): Promise<WsLanes> {
+  return apiFetch<WsLanes>(
+    `/creator/workspace/projects/${projectId}/tasks`,
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function createWsTask(
+  projectId: string,
+  input: {
+    title: string;
+    description?: string;
+    priority?: WsPriority;
+    lane?: WsLane;
+  },
+  forwardCookies: string,
+): Promise<WsTask> {
+  return apiFetch<WsTask>(`/creator/workspace/projects/${projectId}/tasks`, {
+    method: "POST",
+    body: input,
+    forwardCookies,
+  });
+}
+
+export async function moveWsTaskLane(
+  taskId: string,
+  lane: WsLane,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/workspace/tasks/${taskId}/lane`,
+    {
+      method: "PATCH",
+      body: { lane },
+      forwardCookies,
+    },
+  );
+}
+
+export async function listWsComments(
+  taskId: string,
+  forwardCookies?: string,
+): Promise<WsComment[]> {
+  return apiFetch<WsComment[]>(
+    `/creator/workspace/tasks/${taskId}/comments`,
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function addWsComment(
+  taskId: string,
+  body: string,
+  forwardCookies: string,
+): Promise<WsComment> {
+  return apiFetch<WsComment>(`/creator/workspace/tasks/${taskId}/comments`, {
+    method: "POST",
+    body: { body },
+    forwardCookies,
+  });
+}
