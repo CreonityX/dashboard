@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useAccount } from "@/context/account-context";
 import { getFinanceData } from "./finance-data";
 import type { FinanceSeed } from "@/lib/finance-adapter";
+import type { Transaction } from "./finance-data";
 import {
   AvailableCard,
   EscrowCard,
@@ -33,7 +34,13 @@ import { UpcomingPayouts } from "./upcoming-payouts";
 import { TaxCompliance } from "./tax-compliance";
 import { PayoutSettings } from "./payout-settings";
 
-export function FinanceApp({ seed }: { seed?: FinanceSeed }) {
+export function FinanceApp({
+  seed,
+  brandTransactions,
+}: {
+  seed?: FinanceSeed;
+  brandTransactions?: Transaction[];
+}) {
   const data = useMemo(() => seed ?? getFinanceData(), [seed]);
   const { isBrand, brandFinance } = useAccount();
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
@@ -251,7 +258,7 @@ export function FinanceApp({ seed }: { seed?: FinanceSeed }) {
             <TransactionTable
               data={
                 isBrand
-                  ? (brandFinance.transactions as any)
+                  ? ((brandTransactions ?? brandFinance.transactions) as any)
                   : data.recentTransactions
               }
             />

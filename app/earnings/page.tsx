@@ -7,11 +7,17 @@ import { Suspense } from "react";
 import {
   me as apiMe,
   getCreatorFinanceOverview,
+  listBrandFinanceTransactions,
   listCreatorFinanceTransactions,
   getCreatorFinanceRevenue,
   listCreatorFinanceUpcoming,
 } from "@/lib/api";
-import { wireToUiFinance, type FinanceSeed } from "@/lib/finance-adapter";
+import {
+  wireToUiFinance,
+  wireToUiTransactions,
+  type FinanceSeed,
+} from "@/lib/finance-adapter";
+import type { Transaction } from "@/components/finance/finance-data";
 
 export const metadata = {
   title: "Finance | Creonity",
@@ -33,9 +39,10 @@ export default async function FinancePage() {
     redirect("/login");
   }
 
-  // Creator view is seeded server-side from the ledger. Brand still uses
-  // the context mock (wired in a follow-up) — visuals unchanged either way.
+  // Creator view is seeded server-side from the ledger. Brand transactions
+  // too; brand cards still use the context mock (follow-up).
   let seed: FinanceSeed | undefined;
+  let brandTransactions: Transaction[] | undefined;
   if (accountType === "creator") {
     try {
       const [overview, transactions, revenue, upcoming] = await Promise.all([
@@ -48,6 +55,14 @@ export default async function FinancePage() {
     } catch {
       seed = undefined;
     }
+  } else if (accountType === "brand") {
+    try {
+      brandTransactions = wireToUiTransactions(
+        await listBrandFinanceTransactions({}, cookieHeader),
+      );
+    } catch {
+      brandTransactions = undefined;
+    }
   }
 
   return (
@@ -58,7 +73,7 @@ export default async function FinancePage() {
       <div className="lg:hidden h-full w-full">
         <MobileShell>
           <Suspense fallback={<div className="p-4">Loading finance...</div>}>
-            <FinanceApp seed={seed} />
+            <FinanceApp seed={seed} brandTransactions={brandTransactions} />
           </Suspense>
         </MobileShell>
       </div>
@@ -66,7 +81,7 @@ export default async function FinancePage() {
       {/* Desktop view */}
       <div className="hidden lg:flex flex-1 pl-[88px] min-h-0">
         <Suspense fallback={<div className="p-4">Loading finance...</div>}>
-          <FinanceApp seed={seed} />
+          <FinanceApp seed={seed} brandTransactions={brandTransactions} />
         </Suspense>
       </div>
     </main>
