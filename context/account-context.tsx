@@ -9,6 +9,14 @@ import { type BrandFinanceState, brandFinanceSeed } from "@/components/finance/b
 import { type BrandAnalyticsState, brandAnalyticsSeed } from "@/lib/brand-analytics-data"
 import { type BrandCampaign, type BrandCampaignDraft, brandCampaignSeed } from "@/lib/brand-campaign-data"
 import { logoutAction } from "@/app/actions/auth"
+import {
+  createBrandCalendarEventAction,
+  deleteBrandCalendarEventAction,
+  listBrandCalendarAction,
+  updateBrandCalendarEventAction,
+} from "@/app/actions/calendar"
+import { getFinanceOverviewAction } from "@/app/actions/finance"
+import { uiToWirePayload, wireToUiEvents } from "@/lib/calendar-adapter"
 
 export type AccountRole = "creator" | "brand"
 export type ActiveAccount = {
@@ -75,6 +83,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [brandFinance, setBrandFinance] = useState<BrandFinanceState>(brandFinanceSeed)
   const [brandAnalytics, setBrandAnalytics] = useState<BrandAnalyticsState>(brandAnalyticsSeed)
   const [brandCampaigns, setBrandCampaigns] = useState<BrandCampaign[]>(brandCampaignSeed)
+
+  useEffect(() => {
+    void listBrandCalendarAction().then((r) => {
+      if (r.success && r.data.length > 0) setBrandCalendarEvents(wireToUiEvents(r.data));
+    });
+    void getFinanceOverviewAction(true).then((r) => {
+      if (r.success)
+        setBrandFinance((current) => ({ ...current, walletBalance: r.data.available }));
+    });
+  }, [])
 
   useEffect(() => {
     const storedAccount = localStorage.getItem(SESSION_KEY)
@@ -162,12 +180,29 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     brandTasks,
     brandConversations,
     saveBrandCalendarEvent(event) {
+      const isServerId = /^[0-9a-f]{8}-/i.test(event.id);
+      if (event.id === "draft" || !isServerId) {
+        const local = event.id === "draft" ? { ...event, id: `brand-event-${Date.now()}` } : event;
+        void createBrandCalendarEventAction(uiToWirePayload(local)).then((r) => {
+          if (r.success)
+            setBrandCalendarEvents((current) =>
+              current.map((item) => (item.id === local.id ? wireToUiEvents([r.data])[0] ?? item : item)),
+            );
+        });
+        setBrandCalendarEvents((current) => {
+          const next = current.some((item) => item.id === local.id) ? current.map((item) => item.id === local.id ? local : item) : [...current, local]
+          localStorage.setItem(CALENDAR_KEY, JSON.stringify(next)); return next
+        })
+        return;
+      }
+      void updateBrandCalendarEventAction(event.id, uiToWirePayload(event));
       setBrandCalendarEvents((current) => {
-        const next = event.id === "draft" ? [...current, { ...event, id: `brand-event-${Date.now()}` }] : current.some((item) => item.id === event.id) ? current.map((item) => item.id === event.id ? event : item) : [...current, event]
+        const next = current.some((item) => item.id === event.id) ? current.map((item) => item.id === event.id ? event : item) : [...current, event]
         localStorage.setItem(CALENDAR_KEY, JSON.stringify(next)); return next
       })
     },
     deleteBrandCalendarEvent(id) {
+      if (/^[0-9a-f]{8}-/i.test(id)) void deleteBrandCalendarEventAction(id);
       setBrandCalendarEvents((current) => { const next = current.filter((event) => event.id !== id); localStorage.setItem(CALENDAR_KEY, JSON.stringify(next)); return next })
     },
     completeBrandTask(id) {

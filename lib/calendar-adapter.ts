@@ -11,7 +11,12 @@
  * `multiDay` is derived from `endDate != null`. The frontend uses the
  * date portion (YYYY-MM-DD) — we strip the time.
  */
-import type { CalendarEvent as WireEvent } from "@/lib/api";
+import type {
+  CalendarEvent as WireEvent,
+  CalendarEventType as WireType,
+  CalendarPlatform as WirePlatform,
+  CalendarPriority as WirePriority,
+} from "@/lib/api";
 import type {
   CalendarEvent,
   EventType,
@@ -79,4 +84,45 @@ export function wireToUiEvents(
   rows: ReadonlyArray<WireEvent>,
 ): CalendarEvent[] {
   return rows.map(wireToUiEvent);
+}
+
+/** UI event → brand/creator create payload. Types already match the wire. */
+export function uiToWirePayload(e: CalendarEvent): {
+  title: string;
+  type: WireEvent["type"];
+  startDate: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  allDay?: boolean;
+  description?: string;
+  platform?: WirePlatform;
+  brand?: string;
+  campaign?: string;
+  creator?: string;
+  assignee?: string;
+  priority?: WirePriority;
+  completed?: boolean;
+  reminder?: string;
+  tags?: string[];
+} {
+  return {
+    title: e.title,
+    type: e.type as WireType,
+    startDate: e.date,
+    ...(e.endDate ? { endDate: e.endDate } : {}),
+    ...(e.startTime ? { startTime: e.startTime } : {}),
+    ...(e.endTime ? { endTime: e.endTime } : {}),
+    allDay: e.allDay,
+    ...(e.description ? { description: e.description } : {}),
+    ...(e.platform ? { platform: e.platform as WirePlatform } : {}),
+    ...(e.brand ? { brand: e.brand } : {}),
+    ...(e.campaign ? { campaign: e.campaign } : {}),
+    ...(e.creator ? { creator: e.creator } : {}),
+    ...(e.assignee ? { assignee: e.assignee } : {}),
+    ...(e.priority ? { priority: e.priority as WirePriority } : {}),
+    ...(e.completed ? { completed: true } : {}),
+    ...(e.reminder ? { reminder: e.reminder } : {}),
+    ...(e.tags && e.tags.length > 0 ? { tags: e.tags } : {}),
+  };
 }
