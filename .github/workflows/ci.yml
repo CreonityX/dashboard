@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build check (PRs only deploys on main)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Catches broken imports/syntax before merge. The deploy workflow
+      # rebuilds on main anyway; this is the early signal for PRs.
+      - name: Next.js build
+        run: pnpm exec opennextjs-cloudflare build
+        env:
+          NEXT_PUBLIC_API_BASE: https://api.creonity.com
