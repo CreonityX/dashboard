@@ -44,7 +44,11 @@ export async function apiFetch<T>(path: string, init: Init = {}): Promise<T> {
   const base = isServer ? INTERNAL_BASE : PUBLIC_BASE;
 
   const finalHeaders: Record<string, string> = { ...headers };
-  if (body !== undefined && !(body instanceof FormData) && !finalHeaders["Content-Type"]) {
+  if (
+    body !== undefined &&
+    !(body instanceof FormData) &&
+    !finalHeaders["Content-Type"]
+  ) {
     finalHeaders["Content-Type"] = "application/json";
   }
   if (isServer && forwardCookies) finalHeaders["Cookie"] = forwardCookies;
@@ -75,11 +79,14 @@ export async function apiFetch<T>(path: string, init: Init = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    const err = data as { error?: { code?: string; message?: string; issues?: ApiError["issues"] } } | null;
+    const err = data as {
+      error?: { code?: string; message?: string; issues?: ApiError["issues"] };
+    } | null;
     throw new ApiCallError({
       status: res.status,
       code: err?.error?.code ?? "HTTP_ERROR",
-      message: err?.error?.message ?? `Request failed with status ${res.status}`,
+      message:
+        err?.error?.message ?? `Request failed with status ${res.status}`,
       ...(err?.error?.issues ? { issues: err.error.issues } : {}),
     });
   }
@@ -152,14 +159,19 @@ export type OnboardingStatus = {
   isComplete: boolean;
 };
 
-export async function login(email: string, password: string): Promise<TokenPair | MfaRequired> {
+export async function login(
+  email: string,
+  password: string,
+): Promise<TokenPair | MfaRequired> {
   return apiFetch<TokenPair | MfaRequired>("/auth/login", {
     method: "POST",
     body: { email, password },
   });
 }
 
-export async function logout(refreshToken: string): Promise<{ message: string }> {
+export async function logout(
+  refreshToken: string,
+): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/auth/logout", {
     method: "POST",
     body: { refresh_token: refreshToken },
@@ -177,46 +189,63 @@ export async function me(forwardCookies?: string): Promise<Me> {
   return apiFetch<Me>("/auth/me", forwardCookies ? { forwardCookies } : {});
 }
 
-export async function registerCreator(payload: RegisterPayload): Promise<RegisterResult> {
+export async function registerCreator(
+  payload: RegisterPayload,
+): Promise<RegisterResult> {
   return apiFetch<RegisterResult>("/auth/register/creator", {
     method: "POST",
     body: payload,
   });
 }
 
-export async function registerBrand(payload: RegisterPayload): Promise<RegisterResult> {
+export async function registerBrand(
+  payload: RegisterPayload,
+): Promise<RegisterResult> {
   return apiFetch<RegisterResult>("/auth/register/brand", {
     method: "POST",
     body: payload,
   });
 }
 
-export async function verifyEmail(email: string, token: string): Promise<{ message: string }> {
+export async function verifyEmail(
+  email: string,
+  token: string,
+): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/auth/verify-email", {
     method: "POST",
     body: { email, token },
   });
 }
 
-export async function resendVerification(email: string): Promise<{ message: string }> {
+export async function resendVerification(
+  email: string,
+): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/auth/resend-verification", {
     method: "POST",
     body: { email },
   });
 }
 
-export async function mfaChallenge(mfaToken: string, totpCode: string): Promise<TokenPair> {
+export async function mfaChallenge(
+  mfaToken: string,
+  totpCode: string,
+): Promise<TokenPair> {
   return apiFetch<TokenPair>("/auth/mfa/challenge", {
     method: "POST",
     body: { mfa_token: mfaToken, totp_code: totpCode },
   });
 }
 
-export async function mfaSetup(forwardCookies: string): Promise<MfaSetupResult> {
+export async function mfaSetup(
+  forwardCookies: string,
+): Promise<MfaSetupResult> {
   return apiFetch<MfaSetupResult>("/auth/mfa/setup", { forwardCookies });
 }
 
-export async function mfaVerify(totpCode: string, forwardCookies: string): Promise<{ message: string }> {
+export async function mfaVerify(
+  totpCode: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/auth/mfa/verify", {
     method: "POST",
     body: { totp_code: totpCode },
@@ -238,12 +267,21 @@ export async function mfaDisable(
 
 // ── Onboarding API (creator account) ─────────────────────────────────────────
 
-export async function onboardingStatus(forwardCookies: string): Promise<OnboardingStatus> {
-  return apiFetch<OnboardingStatus>("/creator/onboarding/status", { forwardCookies });
+export async function onboardingStatus(
+  forwardCookies: string,
+): Promise<OnboardingStatus> {
+  return apiFetch<OnboardingStatus>("/creator/onboarding/status", {
+    forwardCookies,
+  });
 }
 
 export async function onboardingProfileBasics(
-  payload: { displayName: string; username: string; bio?: string; tagline?: string },
+  payload: {
+    displayName: string;
+    username: string;
+    bio?: string;
+    tagline?: string;
+  },
   forwardCookies: string,
 ): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/creator/onboarding/profile-basics", {
@@ -259,11 +297,14 @@ export async function onboardingAvatar(
 ): Promise<{ avatarUrl: string; avatarThumbUrl: string }> {
   const fd = new FormData();
   fd.append("file", file);
-  return apiFetch<{ avatarUrl: string; avatarThumbUrl: string }>("/creator/onboarding/avatar", {
-    method: "POST",
-    body: fd,
-    forwardCookies,
-  });
+  return apiFetch<{ avatarUrl: string; avatarThumbUrl: string }>(
+    "/creator/onboarding/avatar",
+    {
+      method: "POST",
+      body: fd,
+      forwardCookies,
+    },
+  );
 }
 
 export async function onboardingExpertiseTags(
@@ -299,7 +340,9 @@ export async function onboardingPayoutMethod(
   });
 }
 
-export async function onboardingComplete(forwardCookies: string): Promise<{ message: string }> {
+export async function onboardingComplete(
+  forwardCookies: string,
+): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/creator/onboarding/complete", {
     method: "POST",
     forwardCookies,
@@ -311,11 +354,14 @@ export async function acceptTeamInvite(
   token: string,
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/brand/team-members/${memberId}/accept`, {
-    method: "POST",
-    body: { token },
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/brand/team-members/${memberId}/accept`,
+    {
+      method: "POST",
+      body: { token },
+      forwardCookies,
+    },
+  );
 }
 
 // ── Brand profile ─────────────────────────────────────────────────────────────
@@ -353,7 +399,9 @@ export type UpdateBrandProfilePayload = {
   country?: string;
 };
 
-export async function getMyBrand(forwardCookies: string): Promise<BrandProfile> {
+export async function getMyBrand(
+  forwardCookies: string,
+): Promise<BrandProfile> {
   return apiFetch<BrandProfile>("/brand/me", { forwardCookies });
 }
 
@@ -372,7 +420,9 @@ export async function getPublicBrandProfile(
   brandId: string,
   forwardCookies: string,
 ): Promise<PublicBrandProfile> {
-  return apiFetch<PublicBrandProfile>(`/brand/${brandId}/public`, { forwardCookies });
+  return apiFetch<PublicBrandProfile>(`/brand/${brandId}/public`, {
+    forwardCookies,
+  });
 }
 
 // ── Team (brand + creator share the shape; only the prefix differs) ──────────
@@ -387,19 +437,26 @@ export type TeamMember = {
   activatedAt: string | null;
 };
 
-export async function listBrandTeam(forwardCookies: string): Promise<{ members: TeamMember[] }> {
-  return apiFetch<{ members: TeamMember[] }>("/brand/team-members", { forwardCookies });
+export async function listBrandTeam(
+  forwardCookies: string,
+): Promise<{ members: TeamMember[] }> {
+  return apiFetch<{ members: TeamMember[] }>("/brand/team-members", {
+    forwardCookies,
+  });
 }
 
 export async function inviteBrandMember(
   payload: { email: string; role: string },
   forwardCookies: string,
 ): Promise<{ message: string; teamMemberId: string }> {
-  return apiFetch<{ message: string; teamMemberId: string }>("/brand/team-members", {
-    method: "POST",
-    body: payload,
-    forwardCookies,
-  });
+  return apiFetch<{ message: string; teamMemberId: string }>(
+    "/brand/team-members",
+    {
+      method: "POST",
+      body: payload,
+      forwardCookies,
+    },
+  );
 }
 
 export async function updateBrandMemberRole(
@@ -424,30 +481,32 @@ export async function removeBrandMember(
   });
 }
 
-export async function listCreatorTeam(forwardCookies: string): Promise<{ members: TeamMember[] }> {
-  return apiFetch<{ members: TeamMember[] }>("/creator/team-members", { forwardCookies });
+export async function listCreatorTeam(
+  forwardCookies: string,
+): Promise<{ members: TeamMember[] }> {
+  return apiFetch<{ members: TeamMember[] }>("/creator/team-members", {
+    forwardCookies,
+  });
 }
 
 export async function inviteCreatorMember(
   payload: { email: string; role: string },
   forwardCookies: string,
 ): Promise<{ message: string; teamMemberId: string }> {
-  return apiFetch<{ message: string; teamMemberId: string }>("/creator/team-members", {
-    method: "POST",
-    body: payload,
-    forwardCookies,
-  });
+  return apiFetch<{ message: string; teamMemberId: string }>(
+    "/creator/team-members",
+    {
+      method: "POST",
+      body: payload,
+      forwardCookies,
+    },
+  );
 }
 
 // ── Campaigns (brand side) ────────────────────────────────────────────────────
 
 export type CampaignStatus =
-  | "draft"
-  | "active"
-  | "paused"
-  | "closed"
-  | "completed"
-  | "cancelled";
+  "draft" | "active" | "paused" | "closed" | "completed" | "cancelled";
 
 export type Campaign = {
   id: string;
@@ -542,15 +601,21 @@ async function campaignTransition(
   });
 }
 
-export const publishCampaign = (id: string, c: string) => campaignTransition(id, "publish", c);
-export const pauseCampaign = (id: string, c: string) => campaignTransition(id, "pause", c);
-export const resumeCampaign = (id: string, c: string) => campaignTransition(id, "resume", c);
-export const closeCampaign = (id: string, c: string) => campaignTransition(id, "close", c);
-export const cancelCampaign = (id: string, c: string) => campaignTransition(id, "cancel", c);
+export const publishCampaign = (id: string, c: string) =>
+  campaignTransition(id, "publish", c);
+export const pauseCampaign = (id: string, c: string) =>
+  campaignTransition(id, "pause", c);
+export const resumeCampaign = (id: string, c: string) =>
+  campaignTransition(id, "resume", c);
+export const closeCampaign = (id: string, c: string) =>
+  campaignTransition(id, "close", c);
+export const cancelCampaign = (id: string, c: string) =>
+  campaignTransition(id, "cancel", c);
 
 // ── Applications (brand reviews what creators submitted) ──────────────────────
 
-export type ApplicationStatus = "pending" | "shortlisted" | "accepted" | "rejected" | "withdrawn";
+export type ApplicationStatus =
+  "pending" | "shortlisted" | "accepted" | "rejected" | "withdrawn";
 
 export type CampaignApplication = {
   id: string;
@@ -566,7 +631,10 @@ export type CampaignApplication = {
   updatedAt: string;
 };
 
-export type ApplicationPage = { items: CampaignApplication[]; nextCursor: string | null };
+export type ApplicationPage = {
+  items: CampaignApplication[];
+  nextCursor: string | null;
+};
 
 export async function listCampaignApplications(
   campaignId: string,
@@ -578,15 +646,21 @@ export async function listCampaignApplications(
   if (params.limit !== undefined) qs.set("limit", String(params.limit));
   if (params.cursor) qs.set("cursor", params.cursor);
   const suffix = qs.size > 0 ? `?${qs}` : "";
-  return apiFetch<ApplicationPage>(`/campaign/${campaignId}/applications${suffix}`, {
-    forwardCookies,
-  });
+  return apiFetch<ApplicationPage>(
+    `/campaign/${campaignId}/applications${suffix}`,
+    {
+      forwardCookies,
+    },
+  );
 }
 
 export async function reviewApplication(
   campaignId: string,
   applicationId: string,
-  payload: { action: "shortlist" | "accept" | "reject"; rejectionReason?: string },
+  payload: {
+    action: "shortlist" | "accept" | "reject";
+    rejectionReason?: string;
+  },
   forwardCookies: string,
 ): Promise<{ message: string; dealId?: string }> {
   return apiFetch<{ message: string; dealId?: string }>(
@@ -618,14 +692,18 @@ export async function discoverCampaigns(
   if (params.limit !== undefined) qs.set("limit", String(params.limit));
   if (params.cursor) qs.set("cursor", params.cursor);
   const suffix = qs.size > 0 ? `?${qs}` : "";
-  return apiFetch<CampaignPage>(`/campaign/discover${suffix}`, { forwardCookies });
+  return apiFetch<CampaignPage>(`/campaign/discover${suffix}`, {
+    forwardCookies,
+  });
 }
 
 export async function getDiscoverCampaign(
   campaignId: string,
   forwardCookies: string,
 ): Promise<Campaign> {
-  return apiFetch<Campaign>(`/campaign/discover/${campaignId}`, { forwardCookies });
+  return apiFetch<Campaign>(`/campaign/discover/${campaignId}`, {
+    forwardCookies,
+  });
 }
 
 export async function applyToCampaign(
@@ -648,17 +726,22 @@ export async function listMyApplications(
   if (params.limit !== undefined) qs.set("limit", String(params.limit));
   if (params.cursor) qs.set("cursor", params.cursor);
   const suffix = qs.size > 0 ? `?${qs}` : "";
-  return apiFetch<ApplicationPage>(`/campaign/my-applications${suffix}`, { forwardCookies });
+  return apiFetch<ApplicationPage>(`/campaign/my-applications${suffix}`, {
+    forwardCookies,
+  });
 }
 
 export async function withdrawApplication(
   applicationId: string,
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/campaign/my-applications/${applicationId}`, {
-    method: "DELETE",
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/campaign/my-applications/${applicationId}`,
+    {
+      method: "DELETE",
+      forwardCookies,
+    },
+  );
 }
 
 // ── Deals (both sides) ────────────────────────────────────────────────────────
@@ -700,7 +783,10 @@ export async function listDeals(
   return apiFetch<DealPage>(`/campaign/deals${suffix}`, { forwardCookies });
 }
 
-export async function getDeal(dealId: string, forwardCookies: string): Promise<Deal> {
+export async function getDeal(
+  dealId: string,
+  forwardCookies: string,
+): Promise<Deal> {
   return apiFetch<Deal>(`/campaign/deals/${dealId}`, { forwardCookies });
 }
 
@@ -709,11 +795,14 @@ export async function submitDealContent(
   contentSubmissionUrl: string,
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/campaign/deals/${dealId}/submit-content`, {
-    method: "POST",
-    body: { contentSubmissionUrl },
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/campaign/deals/${dealId}/submit-content`,
+    {
+      method: "POST",
+      body: { contentSubmissionUrl },
+      forwardCookies,
+    },
+  );
 }
 
 export async function approveDeal(
@@ -757,7 +846,11 @@ export type PlatformBreakdown = {
   followerDelta: number | null;
   engagementRate: number | null;
   avgViews: number | null;
-  topPost: { title: string | null; url: string | null; views: number | null } | null;
+  topPost: {
+    title: string | null;
+    url: string | null;
+    views: number | null;
+  } | null;
 };
 
 export type ContentMetric = {
@@ -840,18 +933,24 @@ export async function getInsightsOverview(
   params: DateRange,
   forwardCookies: string,
 ): Promise<InsightsOverview> {
-  return apiFetch<InsightsOverview>(`/creator/insights/overview${rangeQs(params)}`, {
-    forwardCookies,
-  });
+  return apiFetch<InsightsOverview>(
+    `/creator/insights/overview${rangeQs(params)}`,
+    {
+      forwardCookies,
+    },
+  );
 }
 
 export async function getInsightsPlatforms(
   params: DateRange,
   forwardCookies: string,
 ): Promise<PlatformBreakdown[]> {
-  return apiFetch<PlatformBreakdown[]>(`/creator/insights/platforms${rangeQs(params)}`, {
-    forwardCookies,
-  });
+  return apiFetch<PlatformBreakdown[]>(
+    `/creator/insights/platforms${rangeQs(params)}`,
+    {
+      forwardCookies,
+    },
+  );
 }
 
 export async function getInsightsContent(
@@ -865,7 +964,9 @@ export async function getInsightsContent(
   },
   forwardCookies: string,
 ): Promise<ContentPage> {
-  return apiFetch<ContentPage>(`/creator/insights/content${rangeQs(params)}`, { forwardCookies });
+  return apiFetch<ContentPage>(`/creator/insights/content${rangeQs(params)}`, {
+    forwardCookies,
+  });
 }
 
 export async function getInsightsAudience(
@@ -887,24 +988,32 @@ export async function getInsightsGrowthChart(
   },
   forwardCookies: string,
 ): Promise<GrowthSeries> {
-  return apiFetch<GrowthSeries>(`/creator/insights/growth-chart${rangeQs(params)}`, {
-    forwardCookies,
-  });
+  return apiFetch<GrowthSeries>(
+    `/creator/insights/growth-chart${rangeQs(params)}`,
+    {
+      forwardCookies,
+    },
+  );
 }
 
 export async function getInsightsBenchmarks(
   niche: string,
   forwardCookies: string,
 ): Promise<Benchmarks> {
-  return apiFetch<Benchmarks>(`/creator/insights/benchmarks${rangeQs({ niche })}`, {
-    forwardCookies,
-  });
+  return apiFetch<Benchmarks>(
+    `/creator/insights/benchmarks${rangeQs({ niche })}`,
+    {
+      forwardCookies,
+    },
+  );
 }
 
 export async function getInsightsDealPerformance(
   forwardCookies: string,
 ): Promise<DealPerformance> {
-  return apiFetch<DealPerformance>("/creator/insights/deal-performance", { forwardCookies });
+  return apiFetch<DealPerformance>("/creator/insights/deal-performance", {
+    forwardCookies,
+  });
 }
 
 // ── Brand analytics overview ──────────────────────────────────────────────────
@@ -949,7 +1058,9 @@ export type BrandAnalyticsOverview = {
 export async function getBrandAnalyticsOverview(
   forwardCookies: string,
 ): Promise<BrandAnalyticsOverview> {
-  return apiFetch<BrandAnalyticsOverview>("/brand/analytics/overview", { forwardCookies });
+  return apiFetch<BrandAnalyticsOverview>("/brand/analytics/overview", {
+    forwardCookies,
+  });
 }
 
 // ── UI status mapping ─────────────────────────────────────────────────────────
@@ -957,7 +1068,8 @@ export async function getBrandAnalyticsOverview(
 // paused; the backend uses draft|active|paused|closed|completed|cancelled.
 // Map at the boundary (in UI code) so both sides keep their own vocabulary.
 
-export type UiCampaignStatus = "live" | "planning" | "completed" | "archived" | "paused";
+export type UiCampaignStatus =
+  "live" | "planning" | "completed" | "archived" | "paused";
 
 export function toUiCampaignStatus(s: CampaignStatus): UiCampaignStatus {
   switch (s) {
@@ -1011,15 +1123,20 @@ export type DmThread = {
   participants: Array<{ userId: string; email: string }>;
 };
 
-
-
-export type MessageReaction = { emoji: string; count: number; userIds: string[] };
+export type MessageReaction = {
+  emoji: string;
+  count: number;
+  userIds: string[];
+};
 
 export async function listMessageReactions(
   messageId: string,
   forwardCookies: string,
 ): Promise<MessageReaction[]> {
-  return apiFetch<MessageReaction[]>(`/creator/comms/messages/${messageId}/reactions`, { forwardCookies });
+  return apiFetch<MessageReaction[]>(
+    `/creator/comms/messages/${messageId}/reactions`,
+    { forwardCookies },
+  );
 }
 
 export async function addMessageReaction(
@@ -1027,11 +1144,14 @@ export async function addMessageReaction(
   emoji: string,
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/creator/comms/messages/${messageId}/reactions`, {
-    method: "POST",
-    body: { emoji },
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/creator/comms/messages/${messageId}/reactions`,
+    {
+      method: "POST",
+      body: { emoji },
+      forwardCookies,
+    },
+  );
 }
 
 export async function removeMessageReaction(
@@ -1039,10 +1159,13 @@ export async function removeMessageReaction(
   emoji: string,
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/creator/comms/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
-    method: "DELETE",
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/creator/comms/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+    {
+      method: "DELETE",
+      forwardCookies,
+    },
+  );
 }
 
 export type UnreadCounts = {
@@ -1050,7 +1173,9 @@ export type UnreadCounts = {
   dms: Array<{ id: string; unreadCount: number }>;
 };
 
-export async function listCommChannels(forwardCookies: string): Promise<CommChannel[]> {
+export async function listCommChannels(
+  forwardCookies: string,
+): Promise<CommChannel[]> {
   return apiFetch<CommChannel[]>("/creator/comms/channels", { forwardCookies });
 }
 
@@ -1074,9 +1199,12 @@ export async function listChannelMessages(
   if (params.before) qs.set("before", params.before);
   if (params.limit !== undefined) qs.set("limit", String(params.limit));
   const suffix = qs.size > 0 ? `?${qs}` : "";
-  return apiFetch<CommMessage[]>(`/creator/comms/channels/${channelId}/messages${suffix}`, {
-    forwardCookies,
-  });
+  return apiFetch<CommMessage[]>(
+    `/creator/comms/channels/${channelId}/messages${suffix}`,
+    {
+      forwardCookies,
+    },
+  );
 }
 
 export async function sendChannelMessage(
@@ -1084,14 +1212,19 @@ export async function sendChannelMessage(
   payload: { body: string; parentMessageId?: string },
   forwardCookies: string,
 ): Promise<CommMessage> {
-  return apiFetch<CommMessage>(`/creator/comms/channels/${channelId}/messages`, {
-    method: "POST",
-    body: payload,
-    forwardCookies,
-  });
+  return apiFetch<CommMessage>(
+    `/creator/comms/channels/${channelId}/messages`,
+    {
+      method: "POST",
+      body: payload,
+      forwardCookies,
+    },
+  );
 }
 
-export async function listDmThreads(forwardCookies: string): Promise<DmThread[]> {
+export async function listDmThreads(
+  forwardCookies: string,
+): Promise<DmThread[]> {
   return apiFetch<DmThread[]>("/creator/comms/dms", { forwardCookies });
 }
 
@@ -1115,9 +1248,12 @@ export async function listDmMessages(
   if (params.before) qs.set("before", params.before);
   if (params.limit !== undefined) qs.set("limit", String(params.limit));
   const suffix = qs.size > 0 ? `?${qs}` : "";
-  return apiFetch<CommMessage[]>(`/creator/comms/dms/${threadId}/messages${suffix}`, {
-    forwardCookies,
-  });
+  return apiFetch<CommMessage[]>(
+    `/creator/comms/dms/${threadId}/messages${suffix}`,
+    {
+      forwardCookies,
+    },
+  );
 }
 
 export async function sendDmMessage(
@@ -1132,7 +1268,9 @@ export async function sendDmMessage(
   });
 }
 
-export async function getUnreadCounts(forwardCookies: string): Promise<UnreadCounts> {
+export async function getUnreadCounts(
+  forwardCookies: string,
+): Promise<UnreadCounts> {
   return apiFetch<UnreadCounts>("/creator/comms/unread", { forwardCookies });
 }
 
@@ -1141,11 +1279,14 @@ export async function markChannelRead(
   messageId: string,
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/creator/comms/channels/${channelId}/mark-read`, {
-    method: "POST",
-    body: { messageId },
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/creator/comms/channels/${channelId}/mark-read`,
+    {
+      method: "POST",
+      body: { messageId },
+      forwardCookies,
+    },
+  );
 }
 
 export async function markDmRead(
@@ -1153,13 +1294,15 @@ export async function markDmRead(
   messageId: string,
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/creator/comms/dms/${threadId}/mark-read`, {
-    method: "POST",
-    body: { messageId },
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/creator/comms/dms/${threadId}/mark-read`,
+    {
+      method: "POST",
+      body: { messageId },
+      forwardCookies,
+    },
+  );
 }
-
 
 // ── Workflows ────────────────────────────────────────────────────────────────
 
@@ -1209,19 +1352,10 @@ export type WorkflowInstanceStatus =
   | "failed";
 
 export type WorkflowStepStatus =
-  | "pending"
-  | "in_progress"
-  | "approved"
-  | "rejected"
-  | "skipped"
-  | "failed";
+  "pending" | "in_progress" | "approved" | "rejected" | "skipped" | "failed";
 
 export type WorkflowReferenceType =
-  | "campaign"
-  | "content"
-  | "deal"
-  | "task"
-  | "custom";
+  "campaign" | "content" | "deal" | "task" | "custom";
 
 export type WorkflowStepExecution = {
   id: string;
@@ -1259,12 +1393,23 @@ export type WorkflowInstanceWithSteps = WorkflowInstance & {
   steps: WorkflowStepExecution[];
 };
 
-export async function listWorkflowTemplates(forwardCookies?: string): Promise<WorkflowTemplate[]> {
-  return apiFetch<WorkflowTemplate[]>("/creator/workflows/templates", forwardCookies ? { forwardCookies } : {});
+export async function listWorkflowTemplates(
+  forwardCookies?: string,
+): Promise<WorkflowTemplate[]> {
+  return apiFetch<WorkflowTemplate[]>(
+    "/creator/workflows/templates",
+    forwardCookies ? { forwardCookies } : {},
+  );
 }
 
-export async function getWorkflowTemplate(id: string, forwardCookies?: string): Promise<WorkflowTemplate> {
-  return apiFetch<WorkflowTemplate>(`/creator/workflows/templates/${id}`, forwardCookies ? { forwardCookies } : {});
+export async function getWorkflowTemplate(
+  id: string,
+  forwardCookies?: string,
+): Promise<WorkflowTemplate> {
+  return apiFetch<WorkflowTemplate>(
+    `/creator/workflows/templates/${id}`,
+    forwardCookies ? { forwardCookies } : {},
+  );
 }
 
 export async function createWorkflowTemplate(
@@ -1299,7 +1444,11 @@ export async function startWorkflow(
 }
 
 export async function listWorkflowInstances(
-  params: { status?: WorkflowInstanceStatus; referenceType?: WorkflowReferenceType; limit?: number } = {},
+  params: {
+    status?: WorkflowInstanceStatus;
+    referenceType?: WorkflowReferenceType;
+    limit?: number;
+  } = {},
   forwardCookies?: string,
 ): Promise<WorkflowInstance[]> {
   const qs = new URLSearchParams();
@@ -1307,14 +1456,20 @@ export async function listWorkflowInstances(
   if (params.referenceType) qs.set("referenceType", params.referenceType);
   if (params.limit !== undefined) qs.set("limit", String(params.limit));
   const suffix = qs.size > 0 ? `?${qs}` : "";
-  return apiFetch<WorkflowInstance[]>(`/creator/workflows/instances${suffix}`, forwardCookies ? { forwardCookies } : {});
+  return apiFetch<WorkflowInstance[]>(
+    `/creator/workflows/instances${suffix}`,
+    forwardCookies ? { forwardCookies } : {},
+  );
 }
 
 export async function getWorkflowInstance(
   id: string,
   forwardCookies?: string,
 ): Promise<WorkflowInstanceWithSteps> {
-  return apiFetch<WorkflowInstanceWithSteps>(`/creator/workflows/instances/${id}`, forwardCookies ? { forwardCookies } : {});
+  return apiFetch<WorkflowInstanceWithSteps>(
+    `/creator/workflows/instances/${id}`,
+    forwardCookies ? { forwardCookies } : {},
+  );
 }
 
 export async function approveWorkflowStep(
@@ -1322,21 +1477,27 @@ export async function approveWorkflowStep(
   payload: { stepIndex: number; approved: boolean; rejectionReason?: string },
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/creator/workflows/instances/${id}/approve-step`, {
-    method: "POST",
-    body: payload,
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/creator/workflows/instances/${id}/approve-step`,
+    {
+      method: "POST",
+      body: payload,
+      forwardCookies,
+    },
+  );
 }
 
 export async function cancelWorkflowInstance(
   id: string,
   forwardCookies: string,
 ): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/creator/workflows/instances/${id}/cancel`, {
-    method: "POST",
-    forwardCookies,
-  });
+  return apiFetch<{ message: string }>(
+    `/creator/workflows/instances/${id}/cancel`,
+    {
+      method: "POST",
+      forwardCookies,
+    },
+  );
 }
 
 // ── Notifications ────────────────────────────────────────────────────────────
@@ -1496,11 +1657,7 @@ export type CalendarEventType =
   | "personal";
 
 export type CalendarPlatform =
-  | "instagram"
-  | "youtube"
-  | "tiktok"
-  | "twitter"
-  | "linkedin";
+  "instagram" | "youtube" | "tiktok" | "twitter" | "linkedin";
 
 export type CalendarPriority = "low" | "medium" | "high";
 
@@ -1640,6 +1797,133 @@ export async function deleteBrandCalendarEvent(
 ): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/brand/calendar/${id}`, {
     method: "DELETE",
+    forwardCookies,
+  });
+}
+
+// ── Finance (ledger-only v0) ─────────────────────────────────────────────────
+
+export type LedgerKind =
+  "earning" | "payout" | "withdrawal" | "fee" | "adjustment";
+export type LedgerStatus = "pending" | "processing" | "completed" | "failed";
+
+export type FinanceOverview = {
+  totalEarned: number;
+  inEscrow: number;
+  available: number;
+  currency: string;
+};
+
+export type LedgerEntry = {
+  id: string;
+  accountType: string;
+  accountId: string;
+  kind: LedgerKind;
+  status: LedgerStatus;
+  amount: string;
+  currency: string;
+  source: string;
+  description: string;
+  counterparty: string | null;
+  referenceType: string | null;
+  referenceId: string | null;
+  expectedAt: string | null;
+  occurredAt: string;
+  createdAt: string;
+};
+
+export type RevenuePoint = {
+  month: string;
+  campaigns: number;
+  platform: number;
+  affiliates: number;
+  other: number;
+};
+
+async function financeGet<T>(
+  tree: "creator" | "brand",
+  path: string,
+  forwardCookies?: string,
+): Promise<T> {
+  return apiFetch<T>(
+    `/${tree}/finance${path}`,
+    forwardCookies ? { forwardCookies } : {},
+  );
+}
+
+export async function getCreatorFinanceOverview(
+  forwardCookies?: string,
+): Promise<FinanceOverview> {
+  return financeGet<FinanceOverview>("creator", "/overview", forwardCookies);
+}
+
+export async function getBrandFinanceOverview(
+  forwardCookies?: string,
+): Promise<FinanceOverview> {
+  return financeGet<FinanceOverview>("brand", "/overview", forwardCookies);
+}
+
+export async function listCreatorFinanceTransactions(
+  params: { kind?: LedgerKind; status?: LedgerStatus } = {},
+  forwardCookies?: string,
+): Promise<LedgerEntry[]> {
+  const qs = new URLSearchParams();
+  if (params.kind) qs.set("kind", params.kind);
+  if (params.status) qs.set("status", params.status);
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return financeGet<LedgerEntry[]>(
+    "creator",
+    `/transactions${suffix}`,
+    forwardCookies,
+  );
+}
+
+export async function listBrandFinanceTransactions(
+  params: { kind?: LedgerKind; status?: LedgerStatus } = {},
+  forwardCookies?: string,
+): Promise<LedgerEntry[]> {
+  const qs = new URLSearchParams();
+  if (params.kind) qs.set("kind", params.kind);
+  if (params.status) qs.set("status", params.status);
+  const suffix = qs.size > 0 ? `?${qs}` : "";
+  return financeGet<LedgerEntry[]>(
+    "brand",
+    `/transactions${suffix}`,
+    forwardCookies,
+  );
+}
+
+export async function getCreatorFinanceRevenue(
+  forwardCookies?: string,
+): Promise<RevenuePoint[]> {
+  return financeGet<RevenuePoint[]>("creator", "/revenue", forwardCookies);
+}
+
+export async function getBrandFinanceRevenue(
+  forwardCookies?: string,
+): Promise<RevenuePoint[]> {
+  return financeGet<RevenuePoint[]>("brand", "/revenue", forwardCookies);
+}
+
+export async function listCreatorFinanceUpcoming(
+  forwardCookies?: string,
+): Promise<LedgerEntry[]> {
+  return financeGet<LedgerEntry[]>("creator", "/upcoming", forwardCookies);
+}
+
+export async function listBrandFinanceUpcoming(
+  forwardCookies?: string,
+): Promise<LedgerEntry[]> {
+  return financeGet<LedgerEntry[]>("brand", "/upcoming", forwardCookies);
+}
+
+export async function requestCreatorWithdrawal(
+  input: { amount: number; destination: string },
+  forwardCookies: string,
+): Promise<LedgerEntry> {
+  return apiFetch<LedgerEntry>(`/creator/finance/withdrawals`, {
+    method: "POST",
+    body: input,
     forwardCookies,
   });
 }
