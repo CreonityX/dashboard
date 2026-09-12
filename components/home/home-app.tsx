@@ -26,6 +26,8 @@ import { CAMPAIGNS, PIPELINE_DEALS } from "@/components/campaign/campaign-data"
 import { getFinanceData } from "@/components/finance/finance-data"
 import { getGlobalAnalyticsData, type AnalyticsTimeframe } from "@/components/analytics/platform-analytics-data"
 import { EVENT_TYPE_CONFIG, formatTime, getUpcomingEvents, type CalendarEvent } from "@/lib/calendar-data"
+import { listCreatorCalendarAction } from "@/app/actions/calendar"
+import { wireToUiEvents } from "@/lib/calendar-adapter"
 import { useProfile } from "@/context/profile-context"
 import { useAccount } from "@/context/account-context"
 import { BrandLogo } from "@/components/ui/brand-logo"
@@ -166,8 +168,19 @@ function CreatorHomeApp() {
   }, [])
 
   const firstName = profile?.name ? profile.name.split(" ")[0] : "User"
-  const urgentEvents = useMemo(() => getUpcomingEvents(12).filter((event) => event.priority === "high" || event.type === "deadline"), [])
-  const todayEvents = useMemo(() => getUpcomingEvents(12).filter((event) => event.type !== "personal").slice(0, 3), [])
+  const [liveEvents, setLiveEvents] = useState<CalendarEvent[] | null>(null)
+  useEffect(() => {
+    void listCreatorCalendarAction().then((r) => {
+      if (r.success && r.data.length > 0) setLiveEvents(wireToUiEvents(r.data))
+    })
+  }, [])
+  const upcomingSource = useMemo(() => {
+    if (!liveEvents) return getUpcomingEvents(12)
+    const t = new Date().toISOString().split("T")[0]
+    return liveEvents.filter((e) => e.date >= t).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12)
+  }, [liveEvents])
+  const urgentEvents = useMemo(() => upcomingSource.filter((event) => event.priority === "high" || event.type === "deadline"), [upcomingSource])
+  const todayEvents = useMemo(() => upcomingSource.filter((event) => event.type !== "personal").slice(0, 3), [upcomingSource])
   const exclusiveInvite = useMemo(() => CAMPAIGNS.find((campaign) => campaign.invited && campaign.exclusive) ?? CAMPAIGNS.find((campaign) => campaign.invited), [])
   const spotlightCampaign = exclusiveInvite ?? CAMPAIGNS[0]
   const recommendations = useMemo(() => CAMPAIGNS.filter((campaign) => campaign.match && campaign.status !== "Filled").sort((a, b) => (b.match ?? 0) - (a.match ?? 0)).slice(0, 5), [])

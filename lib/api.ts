@@ -178,6 +178,15 @@ export async function logout(
   });
 }
 
+export async function logoutAll(
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/auth/logout-all", {
+    method: "POST",
+    forwardCookies,
+  });
+}
+
 export async function refresh(refreshToken: string): Promise<TokenPair> {
   return apiFetch<TokenPair>("/auth/refresh", {
     method: "POST",

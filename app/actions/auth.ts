@@ -6,6 +6,7 @@ import {
   login as apiLogin,
   me as apiMe,
   logout as apiLogout,
+  logoutAll as apiLogoutAll,
   mfaChallenge as apiMfaChallenge,
   mfaSetup as apiMfaSetup,
   mfaVerify as apiMfaVerify,
@@ -111,6 +112,17 @@ export async function mfaLoginAction(mfaToken: string, totpCode: string): Promis
 }
 
 // ── Logout ────────────────────────────────────────────────────────────────────
+
+export async function logoutAllAction(): Promise<{ success: true }> {
+  try {
+    const cookiesHeader = await getCookieHeader()
+    if (cookiesHeader) await apiLogoutAll(cookiesHeader)
+  } catch {
+    // Best-effort — still clear cookies locally
+  }
+  await clearTokenCookies()
+  return { success: true }
+}
 
 export async function logoutAction(): Promise<{ success: true }> {
   const refreshToken = await getRefreshToken()

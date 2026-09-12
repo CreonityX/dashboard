@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { logoutAllAction } from "@/app/actions/auth"
 import { Icon } from "@iconify/react"
 import { Button } from "@heroui/react"
 import { TrashBin } from "@gravity-ui/icons"
@@ -12,6 +14,7 @@ import {
 } from "../settings-ui"
 
 export function AccountManagementView({ onBack }: { onBack?: () => void }) {
+  const router = useRouter()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
 
@@ -36,6 +39,28 @@ export function AccountManagementView({ onBack }: { onBack?: () => void }) {
             <div className="shrink-0 sm:ml-4 flex items-center">
               <Button onClick={() => toast.success("Export requested", { description: "You will receive an email when your data is ready." })} variant="bordered" className="border-[#e4e4e7] dark:border-[#27272a] font-medium">
                 Request Export
+              </Button>
+            </div>
+          </div>
+        </SettingsCard>
+      </SettingsSection>
+
+      {/* Sessions */}
+      <SettingsSection title="Sessions">
+        <SettingsCard className="flex flex-col p-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center shrink-0 pr-1">
+                <Icon icon="ph:devices" className="w-5 h-5 text-[#0a0a0a] dark:text-white" />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[15px] font-medium text-[#0a0a0a] dark:text-white">Sign out everywhere</span>
+                <span className="text-[13px] text-[#52525b] dark:text-[#a1a1aa] leading-snug">Revoke all sessions on every device, including this one.</span>
+              </div>
+            </div>
+            <div className="shrink-0 sm:ml-4 flex items-center">
+              <Button onClick={() => { void logoutAllAction().then(() => router.push("/login")) }} className="border border-[#e4e4e7] dark:border-[#27272a] font-medium">
+                Sign out all devices
               </Button>
             </div>
           </div>

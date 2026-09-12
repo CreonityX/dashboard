@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAccount } from "@/context/account-context"
+import { updateMyBrandAction } from "@/app/actions/brand"
 import { toast } from "sonner"
 import { Icon } from "@iconify/react"
 import { SettingsActionButton, SettingsCard, SettingsField, SettingsPage, SettingsSection } from "../settings-ui"
@@ -19,14 +20,27 @@ export function BrandProfileView({ onBack }: { onBack?: () => void }) {
 
   if (!brand) return null
 
+  const [saving, setSaving] = useState(false);
+
   const save = () => {
-    updateBrand({ 
-      name, 
-      website, 
-      location, 
-      categories: categories.split(",").map(c => c.trim()).filter(Boolean) 
-    })
-    toast.success("Brand profile updated")
+    if (saving) return;
+    setSaving(true);
+    const patch = {
+      name,
+      website,
+      location,
+      categories: categories.split(",").map(c => c.trim()).filter(Boolean),
+    };
+    void updateMyBrandAction({
+      displayName: name.trim() || undefined,
+      website: website.trim() || null,
+      country: location.trim() || undefined,
+    }).then((r) => {
+      setSaving(false);
+      updateBrand(patch);
+      if (r.success) toast.success("Brand profile updated");
+      else toast.error(r.error);
+    });
   }
   
   return (
