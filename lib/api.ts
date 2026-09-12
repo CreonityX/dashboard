@@ -274,6 +274,63 @@ export async function mfaDisable(
   });
 }
 
+// ── Portfolio (creator) ─────────────────────────────────────────────────────────
+
+export type PortfolioItem = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  platform: string;
+  sourceUrl: string;
+  tab: string | null;
+  duration: string | null;
+  views: number;
+  position: number;
+  isHidden: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function listPortfolioItems(
+  forwardCookies: string,
+): Promise<PortfolioItem[]> {
+  return apiFetch<PortfolioItem[]>("/creator/profile/portfolio", {
+    forwardCookies,
+  });
+}
+
+export async function updatePortfolioItem(
+  id: string,
+  payload: Partial<{
+    title: string;
+    imageUrl: string;
+    platform: string;
+    sourceUrl: string;
+    tab: string;
+    duration: string;
+    views: number;
+    isHidden: boolean;
+  }>,
+  forwardCookies: string,
+): Promise<PortfolioItem> {
+  return apiFetch<PortfolioItem>(`/creator/profile/portfolio/${id}`, {
+    method: "PATCH",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function reorderPortfolioItems(
+  ids: string[],
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/creator/profile/portfolio/reorder", {
+    method: "POST",
+    body: { ids },
+    forwardCookies,
+  });
+}
+
 // ── Social accounts (creator OAuth) ───────────────────────────────────────────
 
 export type SocialAccount = {

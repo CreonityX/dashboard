@@ -7,6 +7,12 @@ import { Chip, Tabs, AlertDialog, Button, Dropdown } from "@heroui/react"
 import { useProfile, PortfolioItem, PortfolioTab } from "@/context/profile-context"
 import { Eye, EyeSlash, Folder, Plus, Pencil, TrashBin } from "@gravity-ui/icons"
 import {
+  listPortfolioAction,
+  reorderPortfolioAction,
+  updatePortfolioItemAction,
+} from "@/app/actions/portfolio"
+import type { PortfolioItem as WireItem } from "@/lib/api"
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -287,6 +293,28 @@ function SortableTab({
   )
 }
 
+const isServerId = (id: string) => /^[0-9a-f]{8}-/i.test(id);
+
+const tabSlug = (label: string) =>
+  `tab-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
+
+function wireToUiItem(w: WireItem, order: number): PortfolioItem {
+  return {
+    id: w.id,
+    title: w.title,
+    imageUrl: w.imageUrl,
+    platform: (["instagram", "x", "tiktok", "youtube", "behance"].includes(w.platform)
+      ? w.platform
+      : "other") as PortfolioItem["platform"],
+    sourceUrl: w.sourceUrl,
+    ...(w.tab ? { tabId: tabSlug(w.tab) } : {}),
+    ...(w.duration ? { duration: w.duration } : {}),
+    ...(w.views ? { views: w.views } : {}),
+    order,
+    ...(w.isHidden ? { isHidden: true } : {}),
+  };
+}
+
 // ── Main Section ──────────────────────────────────────────────────
 export function PortfolioSection({ 
   isEditing = false,
@@ -296,7 +324,31 @@ export function PortfolioSection({
   onChange?: (items: PortfolioItem[]) => void
 }) {
   const { profile, setProfile } = useProfile()
-  
+  const [portfolioLive, setPortfolioLive] = useState(false)
+
+  useEffect(() => {
+    void listPortfolioAction().then((r) => {
+      if (!r.success || r.data.length === 0) return;
+      setPortfolioLive(true);
+      setProfile((prev) => {
+        const labels = new Map<string, string>();
+        for (const w of r.data) {
+          if (w.tab && !labels.has(tabSlug(w.tab))) labels.set(tabSlug(w.tab), w.tab);
+        }
+        const known = new Set(prev.portfolioTabs.map((t) => t.id));
+        const extra = [...labels.entries()]
+          .filter(([id]) => !known.has(id))
+          .map(([id, label], i) => ({ id, label, order: prev.portfolioTabs.length + i }));
+        return {
+          ...prev,
+          portfolioTabs: [...prev.portfolioTabs, ...extra],
+          portfolioItems: r.data.map((w, i) => wireToUiItem(w, i)),
+        };
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [selectedPost, setSelectedPost] = useState<any | null>(null)
 
   const openPost = (post: any) => {
@@ -388,18 +440,29 @@ export function PortfolioSection({
       if (!onChange) return
       const oldIndex = allItems.findIndex((i) => i.id === active.id)
       const newIndex = allItems.findIndex((i) => i.id === over.id)
-      onChange(arrayMove(allItems, oldIndex, newIndex).map((item, idx) => ({ ...item, order: idx })))
+      const next = arrayMove(allItems, oldIndex, newIndex).map((item, idx) => ({ ...item, order: idx }))
+      onChange(next)
+      if (portfolioLive) {
+        const ids = next.filter((i) => isServerId(i.id)).map((i) => i.id)
+        if (ids.length > 0) void reorderPortfolioAction(ids)
+      }
     }
   }
 
   const handleToggleVisibility = (id: string) => {
     if (!onChange) return
+    const target = allItems.find((i) => i.id === id)
     onChange(allItems.map(i => i.id === id ? { ...i, isHidden: !i.isHidden } : i))
+    if (target && isServerId(id)) void updatePortfolioItemAction(id, { isHidden: !target.isHidden })
   }
 
   const handleMoveToTab = (id: string, tabId: string) => {
     if (!onChange) return
     onChange(allItems.map(i => i.id === id ? { ...i, tabId } : i))
+    if (isServerId(id)) {
+      const label = profile.portfolioTabs.find((t) => t.id === tabId)?.label
+      if (label) void updatePortfolioItemAction(id, { tab: label })
+    }
   }
 
   const handleAddDraftTab = () => {
