@@ -2,11 +2,17 @@
 
 import { Avatar, Chip, Popover, PopoverTrigger, PopoverContent, ListBox, Button, TextField, Label, Input, TextArea } from "@heroui/react";
 import { Icon } from "@iconify/react";
-import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { PaginationBar } from "@/components/support/pagination-bar";
-import { useState, ReactNode } from "react";
+import { useEffect, useState, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAccount } from "@/context/account-context";
+import {
+  createTicketAction,
+  listMyTicketsAction,
+  replyTicketAction,
+} from "@/app/actions/support";
+import type { SupportTicket as WireTicket } from "@/lib/api";
 
 export type TimelineEventType = "comment" | "system";
 
@@ -30,7 +36,7 @@ export interface TimelineEvent {
 }
 
 interface Ticket {
-  id: number;
+  id: string;
   subject: string;
   description: string;
   departmentEmail: string;
@@ -39,6 +45,56 @@ interface Ticket {
   status: "Open" | "Pending" | "Resolved";
   date: string;
   timeline: TimelineEvent[];
+}
+
+const WIRE_STATUS: Record<WireTicket["status"], Ticket["status"]> = {
+  open: "Open",
+  assigned: "Pending",
+  resolved: "Resolved",
+};
+
+function wireToUiTicket(w: WireTicket): Ticket {
+  return {
+    id: w.id,
+    subject: w.title,
+    description: w.description ?? "",
+    departmentEmail: "support@creonity.com",
+    category: w.category ?? "General Inquiry",
+    assignee: w.assignedTo
+      ? { name: "Support Team", avatar: "", email: "support@creonity.com" }
+      : { name: "Unassigned", avatar: "", email: "" },
+    status: WIRE_STATUS[w.status],
+    date: new Date(w.createdAt).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+    timeline: [
+      {
+        id: 0,
+        type: "system",
+        text: <>Ticket created</>,
+        icon: "gravity-ui:circle-plus",
+        iconColor: "text-[#71717a] dark:text-[#a1a1aa]",
+        iconBg: "bg-[#f4f4f5] dark:bg-[#27272a]",
+        time: new Date(w.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      },
+      ...w.comments.map((c, i) => ({
+        id: i + 1,
+        type: "comment" as const,
+        author: c.isMine ? "You" : "Support Team",
+        role: (c.isMine ? "user" : "agent") as "user" | "agent",
+        text: c.body,
+        time: new Date(c.createdAt).toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+      })),
+    ],
+  };
 }
 
 const statusColorMap: Record<string, "success" | "warning" | "default"> = {
@@ -53,157 +109,20 @@ const statusBorderMap: Record<string, string> = {
   Resolved: "border-l-emerald-500",
 };
 
-const TICKETS: Ticket[] = [
-  {
-    id: 10458,
-    subject: "API Rate Limit Exceeded",
-    description:
-      "We are consistently hitting the 10,000 requests/min rate limit during peak deployment windows. This is blocking our CI/CD pipeline from completing successfully. We need this increased to at least 20,000 requests/min for our production environment.",
-    departmentEmail: "support@creonity.com",
-    category: "Technical Support",
-    assignee: {
-      name: "Nora Vazquez",
-      avatar: "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/avatars/red.jpg",
-      email: "nora@creonity.com",
-    },
-    status: "Open",
-    date: "Today, 10:45 AM",
-    timeline: [
-      {
-        id: 5,
-        type: "comment",
-        author: "Nora Vazquez",
-        role: "agent",
-        avatar: "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/avatars/red.jpg",
-        text: "Confirmed the delay is isolated to scheduled exports. API requests and dashboard reads are healthy while the backlog drains.",
-        attachment: { name: "worker-trace.har", size: "42 KB" },
-        time: "2:28 AM",
-      },
-      {
-        id: 4,
-        type: "system",
-        text: <>Escalation acknowledged by <span className="font-medium text-[#0a0a0a] dark:text-white">Kaito Reed</span></>,
-        icon: "gravity-ui:bolt",
-        iconColor: "text-amber-500",
-        iconBg: "bg-amber-100 dark:bg-amber-500/20",
-        time: "2:24 AM",
-      },
-      {
-        id: 3,
-        type: "system",
-        text: <>Incident channel joined by <span className="font-medium text-[#0a0a0a] dark:text-white">Mira Stone</span></>,
-        icon: "gravity-ui:person",
-        iconColor: "text-[#71717a] dark:text-[#a1a1aa]",
-        iconBg: "bg-[#f4f4f5] dark:bg-[#27272a]",
-        time: "2:23 AM",
-      },
-      {
-        id: 2,
-        type: "system",
-        text: <>Customer update sent to <span className="font-medium text-[#0a0a0a] dark:text-white">finance-ops</span></>,
-        icon: "gravity-ui:envelope",
-        iconColor: "text-[#71717a] dark:text-[#a1a1aa]",
-        iconBg: "bg-[#f4f4f5] dark:bg-[#27272a]",
-        time: "2:21 AM",
-      },
-      {
-        id: 1,
-        type: "system",
-        text: <>Mitigation deployed to <span className="font-medium text-[#0a0a0a] dark:text-white">export-worker-3</span></>,
-        icon: "gravity-ui:circle-check-fill",
-        iconColor: "text-emerald-500",
-        iconBg: "bg-emerald-100 dark:bg-emerald-500/20",
-        time: "2:18 AM",
-      },
-      {
-        id: 0,
-        type: "system",
-        text: <><span className="font-medium text-[#0a0a0a] dark:text-white">Postmortem reminder</span> scheduled</>,
-        icon: "gravity-ui:clock",
-        iconColor: "text-[#71717a] dark:text-[#a1a1aa]",
-        iconBg: "bg-transparent",
-        time: "2:14 AM",
-      }
-    ],
-  },
-  {
-    id: 10457,
-    subject: "Billing Issue on Pro Plan",
-    description:
-      "I upgraded from Starter to Pro on June 14th but was charged the full Pro monthly amount instead of a prorated charge for the remaining days of the billing cycle. The invoice shows $99 but I expected approximately $52.",
-    departmentEmail: "billing@creonity.com",
-    category: "Account & Billing",
-    assignee: {
-      name: "Sara Johnson",
-      avatar: "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/avatars/blue.jpg",
-      email: "sara@creonity.com",
-    },
-    status: "Pending",
-    date: "Yesterday, 2:30 PM",
-    timeline: [
-      {
-        id: 1,
-        type: "comment",
-        author: "You",
-        role: "user",
-        text: "I upgraded to Pro on the 14th but was charged the full month instead of a prorated amount. Invoice #INV-2026-0614.",
-        time: "Yesterday, 2:30 PM",
-      },
-      {
-        id: 0,
-        type: "system",
-        text: <>Assigned to <span className="font-medium text-[#0a0a0a] dark:text-white">Sara Johnson</span></>,
-        icon: "gravity-ui:person",
-        iconColor: "text-[#71717a] dark:text-[#a1a1aa]",
-        iconBg: "bg-[#f4f4f5] dark:bg-[#27272a]",
-        time: "Yesterday, 3:00 PM",
-      }
-    ]
-  },
-  {
-    id: 10456,
-    subject: "Cannot access Analytics Dashboard",
-    description:
-      "Getting a 403 Forbidden error when navigating to the main analytics dashboard. The error appears immediately after login and affects all team members on my workspace. The REST API still works fine.",
-    departmentEmail: "bugs@creonity.com",
-    category: "Bug Report",
-    assignee: {
-      name: "John Smith",
-      avatar: "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/avatars/green.jpg",
-      email: "john@creonity.com",
-    },
-    status: "Resolved",
-    date: "Jun 24, 2026",
-    timeline: [
-      {
-        id: 1,
-        type: "system",
-        text: <>Status changed to <span className="font-medium text-emerald-500">Resolved</span></>,
-        icon: "gravity-ui:circle-check-fill",
-        iconColor: "text-emerald-500",
-        iconBg: "bg-emerald-100 dark:bg-emerald-500/20",
-        time: "Jun 24, 4:00 PM",
-      },
-      {
-        id: 0,
-        type: "system",
-        text: <>Fix deployed to <span className="font-medium text-[#0a0a0a] dark:text-white">production</span></>,
-        icon: "gravity-ui:bolt",
-        iconColor: "text-amber-500",
-        iconBg: "bg-amber-100 dark:bg-amber-500/20",
-        time: "Jun 24, 2:10 PM",
-      }
-    ]
-  }
-];
-
 export function MyTicketsView({ onBack }: { onBack?: () => void }) {
-  const [tickets, setTickets] = useState<Ticket[]>(TICKETS);
-  const [expandedTicketId, setExpandedTicketId] = useState<number | null>(null);
+  const { isBrand } = useAccount();
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [newTicket, setNewTicket] = useState({ subject: "", description: "", category: "" });
-  const [typingTickets, setTypingTickets] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    void listMyTicketsAction(isBrand).then((r) => {
+      if (r.success) setTickets(r.data.map(wireToUiTicket));
+      else toast.error(r.error);
+    });
+  }, [isBrand]);
 
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
@@ -211,96 +130,56 @@ export function MyTicketsView({ onBack }: { onBack?: () => void }) {
   const startIndex = (page - 1) * itemsPerPage;
   const visibleTickets = tickets.slice(startIndex, startIndex + itemsPerPage);
 
-  const nextId = tickets.length > 0 ? Math.max(...tickets.map(t => t.id)) + 1 : 10001;
-
-  const handleReply = (ticketId: number) => {
-    if (!replyText.trim()) return;
-    
-    setTickets(prev => prev.map(t => {
-      if (t.id === ticketId) {
-        const nextTimeId = (t.timeline || []).length > 0 ? Math.max(...(t.timeline || []).map(x => x.id)) + 1 : 1;
-        return {
-          ...t,
-          timeline: [
-            {
-              id: nextTimeId,
-              type: "comment",
-              author: "You",
-              role: "user",
-              text: replyText,
-              time: "Just now"
-            },
-            ...(t.timeline || [])
-          ]
-        };
+  const handleReply = (ticketId: string) => {
+    const body = replyText.trim();
+    if (!body) return;
+    void replyTicketAction(isBrand, ticketId, body).then((r) => {
+      if (!r.success) {
+        toast.error(r.error);
+        return;
       }
-      return t;
-    }));
-    setReplyText("");
-    toast.success("Reply posted");
-    
-    // Simulate agent typing
-    setTypingTickets(prev => ({ ...prev, [ticketId]: true }));
-    setTimeout(() => {
-      setTypingTickets(prev => ({ ...prev, [ticketId]: false }));
-      setTickets(prev => prev.map(t => {
-        if (t.id === ticketId) {
-          const assigneeName = t.assignee.name !== "Unassigned" ? t.assignee.name : "Support Team";
-          const nextTimeId = (t.timeline || []).length > 0 ? Math.max(...(t.timeline || []).map(x => x.id)) + 1 : 1;
+      setTickets((prev) =>
+        prev.map((t) => {
+          if (t.id !== ticketId) return t;
+          const nextTimeId =
+            t.timeline.length > 0 ? Math.max(...t.timeline.map((x) => x.id)) + 1 : 1;
           return {
             ...t,
             timeline: [
-              { 
-                id: nextTimeId, 
-                type: "comment", 
-                author: assigneeName, 
-                role: "agent", 
-                avatar: t.assignee.avatar,
-                text: "We are looking into this right now and will get back to you shortly.", 
-                time: "Just now" 
+              {
+                id: nextTimeId,
+                type: "comment",
+                author: "You",
+                role: "user",
+                text: body,
+                time: "Just now",
               },
-              ...(t.timeline || [])
-            ]
+              ...t.timeline,
+            ],
           };
-        }
-        return t;
-      }));
-    }, 2500);
+        }),
+      );
+      setReplyText("");
+      toast.success("Reply posted");
+    });
   };
 
   const handleCreateTicket = () => {
-    if (!newTicket.subject || !newTicket.description) return;
-    
-    const created: Ticket = {
-      id: nextId,
-      subject: newTicket.subject,
-      description: newTicket.description,
-      category: newTicket.category || "General Inquiry",
-      departmentEmail: "support@creonity.com",
-      assignee: {
-        name: "Unassigned",
-        avatar: "",
-        email: "",
-      },
-      status: "Open",
-      date: "Just now",
-      timeline: [
-        {
-          id: 1,
-          type: "system",
-          text: <>Ticket created</>,
-          icon: "gravity-ui:circle-plus",
-          iconColor: "text-[#71717a] dark:text-[#a1a1aa]",
-          iconBg: "bg-[#f4f4f5] dark:bg-[#27272a]",
-          time: "Just now"
-        }
-      ]
-    };
-    
-    setTickets([created, ...tickets]);
-    setIsCreating(false);
-    setNewTicket({ subject: "", description: "", category: "" });
-    toast.success("Ticket submitted successfully");
+    if (!newTicket.subject.trim() || !newTicket.description.trim()) return;
+    void createTicketAction(isBrand, {
+      title: newTicket.subject.trim(),
+      description: newTicket.description.trim(),
+      ...(newTicket.category ? { category: newTicket.category } : {}),
+    }).then((r) => {
+      if (!r.success) {
+        toast.error(r.error);
+        return;
+      }
+      setTickets((prev) => [wireToUiTicket(r.data), ...prev]);
+      setIsCreating(false);
+      setNewTicket({ subject: "", description: "", category: "" });
+      toast.success("Ticket submitted successfully");
+    });
   };
 
   return (
@@ -359,7 +238,7 @@ export function MyTicketsView({ onBack }: { onBack?: () => void }) {
               {/* ALIGNED HEADER */}
               <div className="flex w-full items-center min-h-[72px] border-b border-[#efefef] dark:border-[#27272a]">
                 <div className="w-[130px] shrink-0 px-5 flex items-center justify-center text-center">
-                  <span className="text-[14px] font-medium text-[#0a0a0a] dark:text-white">#{nextId}</span>
+                  <span className="text-[14px] font-medium text-[#0a0a0a] dark:text-white">#New</span>
                 </div>
                 <div className="flex-[2.5] min-w-[200px] px-4 flex items-center justify-center text-center">
                   <span className="text-[14px] font-medium text-[#737373] dark:text-[#a1a1aa]">Draft Ticket</span>
@@ -498,7 +377,7 @@ export function MyTicketsView({ onBack }: { onBack?: () => void }) {
                   {/* ID */}
                   <div className="w-[100px] sm:w-[130px] shrink-0 px-4 sm:px-5 flex items-center justify-center text-center gap-2">
                     <span className="text-[14px] font-semibold text-[#0a0a0a] dark:text-white tabular-nums">
-                      #{ticket.id}
+                      #{ticket.id.slice(0, 8)}
                     </span>
                     <button
                       className="opacity-40 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
@@ -602,12 +481,6 @@ export function MyTicketsView({ onBack }: { onBack?: () => void }) {
                         </button>
                       </div>
                       
-                      {/* Typing Indicator */}
-                      {typingTickets[ticket.id] && (
-                        <div className="absolute left-[56px] -bottom-2">
-                          <TypingIndicator avatar={ticket.assignee.name !== "Unassigned" ? ticket.assignee.name.split(" ").map((n) => n[0]).join("").substring(0, 2) : "AI"} />
-                        </div>
-                      )}
                     </div>
 
                     {/* Timeline Events */}

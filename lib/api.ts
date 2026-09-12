@@ -309,6 +309,64 @@ export async function connectSocialAccount(
   );
 }
 
+// ── Support tickets (creator + brand "my tickets") ────────────────────────────
+
+export type SupportTicketComment = {
+  id: string;
+  body: string;
+  isMine: boolean;
+  createdAt: string;
+};
+
+export type SupportTicket = {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  status: "open" | "assigned" | "resolved";
+  assignedTo: string | null;
+  createdAt: string;
+  updatedAt: string;
+  comments: SupportTicketComment[];
+};
+
+function supportBase(isBrand: boolean): string {
+  return isBrand ? "/brand/support" : "/creator/support";
+}
+
+export async function listMySupportTickets(
+  isBrand: boolean,
+  forwardCookies: string,
+): Promise<SupportTicket[]> {
+  return apiFetch<SupportTicket[]>(`${supportBase(isBrand)}/tickets`, {
+    forwardCookies,
+  });
+}
+
+export async function createSupportTicket(
+  isBrand: boolean,
+  payload: { title: string; description?: string; category?: string },
+  forwardCookies: string,
+): Promise<SupportTicket> {
+  return apiFetch<SupportTicket>(`${supportBase(isBrand)}/tickets`, {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function addSupportTicketComment(
+  isBrand: boolean,
+  ticketId: string,
+  body: string,
+  forwardCookies: string,
+): Promise<SupportTicketComment> {
+  return apiFetch<SupportTicketComment>(
+    `${supportBase(isBrand)}/tickets/${ticketId}/comments`,
+    { method: "POST", body: { body }, forwardCookies },
+  );
+}
+
 export async function disconnectSocialAccount(
   platform: string,
   forwardCookies: string,
