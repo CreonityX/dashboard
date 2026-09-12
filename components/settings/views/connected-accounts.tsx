@@ -2,7 +2,12 @@
 
 import { Icon } from "@iconify/react"
 import { Button } from "@heroui/react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import {
+  connectSocialAccountAction,
+  disconnectSocialAccountAction,
+  listSocialAccountsAction,
+} from "@/app/actions/social"
 import { toast } from "sonner"
 import {
   SettingsPage,
@@ -21,8 +26,54 @@ const INTEGRATIONS = [
   { id: "zapier", name: "Zapier", icon: "simple-icons:zapier", desc: "Automate workflows with 5000+ apps.", status: "disconnected", meta: null },
 ]
 
+const SOCIAL_IDS = ["instagram", "tiktok", "youtube"];
+
+type SocialState = { status: "connected" | "disconnected"; meta: string | null };
+
 export function ConnectedAccountsView({ onBack }: { onBack?: () => void }) {
   const [disconnectModal, setDisconnectModal] = useState<typeof INTEGRATIONS[0] | null>(null)
+  const [social, setSocial] = useState<Record<string, SocialState>>({});
+
+  useEffect(() => {
+    void listSocialAccountsAction().then((r) => {
+      if (!r.success) return;
+      const next: Record<string, SocialState> = {};
+      for (const a of r.data) {
+        if (!a.isActive) continue;
+        next[a.platform] = {
+          status: "connected",
+          meta: a.platformUsername
+            ? `@${a.platformUsername}`
+            : typeof a.followerCount === "number"
+              ? `${a.followerCount.toLocaleString()} followers`
+              : "Connected",
+        };
+      }
+      setSocial(next);
+    });
+  }, []);
+
+  async function handleConnect(app: (typeof INTEGRATIONS)[number]) {
+    const r = await connectSocialAccountAction(app.id);
+    if (r.success) window.location.href = r.data.authUrl;
+    else toast.error(r.error);
+  }
+
+  async function handleDisconnect(app: (typeof INTEGRATIONS)[number]) {
+    const r = await disconnectSocialAccountAction(app.id);
+    if (r.success) {
+      setSocial((prev) => ({ ...prev, [app.id]: { status: "disconnected", meta: null } }));
+      toast.success(`${app.name} disconnected`);
+    } else {
+      toast.error(r.error);
+    }
+    setDisconnectModal(null);
+  }
+
+  function rowState(app: (typeof INTEGRATIONS)[number]) {
+    if (!SOCIAL_IDS.includes(app.id)) return { status: app.status, meta: app.meta };
+    return social[app.id] ?? { status: "disconnected" as const, meta: null };
+  }
 
   return (
     <SettingsPage title="Connected Accounts" onBack={onBack}>
@@ -34,7 +85,9 @@ export function ConnectedAccountsView({ onBack }: { onBack?: () => void }) {
         </div>
 
         <SettingsCard className="flex flex-col p-0 overflow-hidden">
-          {INTEGRATIONS.map((app) => (
+          {INTEGRATIONS.map((app) => {
+            const live = rowState(app);
+            return (
             <div key={app.id} className="flex items-center justify-between px-6 h-[72px] border-b border-[#f4f4f5] dark:border-[#1f1f1f] last:border-0 gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-8 h-8 flex items-center justify-center shrink-0">
@@ -43,22 +96,23 @@ export function ConnectedAccountsView({ onBack }: { onBack?: () => void }) {
                 <span className="text-[15px] font-semibold text-[#0a0a0a] dark:text-white">{app.name}</span>
               </div>
               
-              {app.status === "connected" ? (
-                <Button 
+              {live.status === "connected" ? (
+                <Button
                   onClick={() => setDisconnectModal(app)} 
                   variant="bordered"
                   className="w-[160px] border-[#e4e4e7] dark:border-[#27272a] bg-[#f4f4f5] dark:bg-[#1f1f1f] text-[#0a0a0a] dark:text-white font-medium rounded-full h-10 transition-colors flex items-center justify-between gap-1.5"
                 >
-                  <span className="truncate flex-1 text-left">{app.meta}</span>
+                  <span className="truncate flex-1 text-left">{live.meta}</span>
                   <Icon icon="gravity-ui:chevron-down" className="w-4 h-4 opacity-50 shrink-0" />
                 </Button>
               ) : (
-                <Button onClick={() => toast.success(`${app.name} connected`, { description: "Account synced successfully." })} className="w-[160px] font-medium bg-[#0a0a0a] text-white dark:bg-white dark:text-[#0a0a0a] rounded-full h-10 transition-colors">
+                <Button onClick={() => { if (SOCIAL_IDS.includes(app.id)) void handleConnect(app); else toast.success(`${app.name} connected`, { description: "Account synced successfully." }); }} className="w-[160px] font-medium bg-[#0a0a0a] text-white dark:bg-white dark:text-[#0a0a0a] rounded-full h-10 transition-colors">
                   Connect
                 </Button>
               )}
             </div>
-          ))}
+            );
+          })}
         </SettingsCard>
       </SettingsSection>
 
@@ -83,10 +137,7 @@ export function ConnectedAccountsView({ onBack }: { onBack?: () => void }) {
               <button onClick={() => setDisconnectModal(null)} className="px-6 py-2.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] dark:bg-[#1f1f1f] dark:hover:bg-[#27272a] text-[#0a0a0a] dark:text-white text-[15px] font-semibold transition-colors">
                 Cancel
               </button>
-              <button onClick={() => {
-                toast.success(`${disconnectModal.name} disconnected`);
-                setDisconnectModal(null);
-              }} className="px-6 py-2.5 rounded-full bg-[#f4f4f5] hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[15px] font-semibold transition-colors">
+              <button onClick={() => { if (SOCIAL_IDS.includes(disconnectModal.id)) void handleDisconnect(disconnectModal); else { toast.success(`${disconnectModal.name} disconnected`); setDisconnectModal(null); } }} className="px-6 py-2.5 rounded-full bg-[#f4f4f5] hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[15px] font-semibold transition-colors">
                 Disconnect
               </button>
             </div>

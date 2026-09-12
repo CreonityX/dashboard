@@ -274,6 +274,51 @@ export async function mfaDisable(
   });
 }
 
+// ── Social accounts (creator OAuth) ───────────────────────────────────────────
+
+export type SocialAccount = {
+  id: string;
+  platform: string;
+  platformUsername: string | null;
+  profileUrl: string | null;
+  followerCount: number | null;
+  isActive: boolean;
+  isPrimary: boolean;
+  lastSyncedAt: string | null;
+  tier: 1 | 2 | 3;
+  source: "oauth" | "manual";
+  isVerified: boolean;
+  createdAt: string;
+};
+
+export async function listSocialAccounts(
+  forwardCookies: string,
+): Promise<SocialAccount[]> {
+  return apiFetch<SocialAccount[]>("/creator/social/accounts", {
+    forwardCookies,
+  });
+}
+
+export async function connectSocialAccount(
+  platform: string,
+  forwardCookies: string,
+): Promise<{ authUrl: string }> {
+  return apiFetch<{ authUrl: string }>(
+    `/creator/social/connect/${platform}`,
+    { forwardCookies },
+  );
+}
+
+export async function disconnectSocialAccount(
+  platform: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/social/disconnect/${platform}`,
+    { method: "DELETE", forwardCookies },
+  );
+}
+
 // ── Onboarding API (creator account) ─────────────────────────────────────────
 
 export async function onboardingStatus(
