@@ -446,7 +446,11 @@ export function KanbanBoard() {
               {attachments.map((a) => (
                 <a
                   key={a.id}
-                  href={a.storageKey}
+                  href={
+                    a.storageKey.startsWith("http")
+                      ? a.storageKey
+                      : `/uploads/${a.storageKey}`
+                  }
                   target="_blank"
                   rel="noreferrer"
                   className="truncate rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2 text-[13px] font-medium text-[#0ea5e9] hover:underline"
