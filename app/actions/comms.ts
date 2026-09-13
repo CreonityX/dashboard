@@ -22,6 +22,7 @@ import {
   listDmMessages as apiListDmMessages,
   listDmThreads as apiListDmThreads,
   listMessageAttachments as apiListMessageAttachments,
+  leaveWorkspace as apiLeaveWorkspace,
   markChannelRead as apiMarkChannelRead,
   markDmRead as apiMarkDmRead,
   sendChannelMessage as apiSendChannelMessage,
@@ -168,6 +169,12 @@ export async function deleteDmThreadAction(
   threadId: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiDeleteDmThread(threadId, c));
+}
+
+export async function leaveWorkspaceAction(): Promise<
+  ActionResult<{ message: string }>
+> {
+  return authed((c) => apiLeaveWorkspace(c));
 }
 
 export async function editChannelMessageAction(

@@ -35,12 +35,14 @@ export function InfoPanel({
   channelId,
   onInviteChannel,
   onLeaveChannel,
+  onLeaveWorkspace,
 }: {
   conversation: Conversation;
   onClose: () => void;
   channelId?: string;
   onInviteChannel?: (channelId: string, email: string) => void;
   onLeaveChannel?: (channelId: string) => void;
+  onLeaveWorkspace?: () => void;
 }) {
   const { isBrand } = useAccount();
   const [showReport, setShowReport] = useState(false);
@@ -314,6 +316,14 @@ export function InfoPanel({
           onClick={() => {
             if (channelId && onLeaveChannel) {
               onLeaveChannel(channelId);
+              return;
+            }
+            if (
+              !channelId &&
+              conversation.type === "community" &&
+              onLeaveWorkspace
+            ) {
+              onLeaveWorkspace();
               return;
             }
             toast.info("Action Successful", {

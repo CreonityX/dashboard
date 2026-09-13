@@ -21,6 +21,7 @@ import {
   inviteToCommChannelAction,
   joinCommChannelAction,
   leaveCommChannelAction,
+  leaveWorkspaceAction,
   markChannelReadAction,
   markDmReadAction,
   sendChannelMessageAction,
@@ -77,6 +78,11 @@ export function MessagesApp() {
   const [threadParent, setThreadParent] = useState<CommMessage | null>(null);
   const [threadReplies, setThreadReplies] = useState<CommMessage[]>([]);
   const [threadLoading, setThreadLoading] = useState(false);
+  const threadParentRef = useRef<CommMessage | null>(null);
+
+  useEffect(() => {
+    threadParentRef.current = threadParent;
+  }, [threadParent]);
   const [pendingSelection, setPendingSelection] = useState<string | null>(null);
   const [showCancelPrompt, setShowCancelPrompt] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>(defaultDraft);
@@ -215,6 +221,37 @@ export function MessagesApp() {
       const key = event.channelId
         ? `ch:${event.channelId}`
         : `dm:${event.dmThreadId}`;
+      if (event.parentMessageId) {
+        // Thread reply: route to the open thread panel, not the main list.
+        setThreadReplies((prev) => {
+          if (
+            threadParentRef.current?.id !== event.parentMessageId ||
+            prev.some((m) => m.id === row.id)
+          )
+            return prev;
+          return [...prev, row];
+        });
+        const bump = (rows: CommMessage[]) =>
+          rows.map((m) =>
+            m.id === event.parentMessageId
+              ? { ...m, replyCount: m.replyCount + 1 }
+              : m,
+          );
+        setLiveMsgs((prev) => {
+          const next: typeof prev = {};
+          for (const [k, rows] of Object.entries(prev)) {
+            next[k] = bump(rows);
+          }
+          return next;
+        });
+        setThreadParent((prev) =>
+          prev && prev.id === event.parentMessageId
+            ? { ...prev, replyCount: prev.replyCount + 1 }
+            : prev,
+        );
+        void refreshUnread();
+        return;
+      }
       setLiveMsgs((prev) => {
         const cur = prev[key] ?? [];
         if (cur.some((m) => m.id === row.id)) return prev;
@@ -383,18 +420,39 @@ export function MessagesApp() {
         }
         const key = activeChannelId ? `ch:${activeChannelId}` : activeId;
         const sentId = res.data.id;
-        setLiveMsgs((prev) => {
-          const cur = prev[key] ?? [];
-          if (cur.some((m) => m.id === sentId)) return prev;
-          return { ...prev, [key]: [...cur, res.data] };
-        });
-        setLoaded((prev) => new Set(prev).add(key));
-        setReplyingTo(null);
         if (replyParentId) {
+          // Thread replies live only in the thread panel — the channel
+          // list query excludes them, so don't append there.
           setThreadReplies((prev) =>
             prev.some((m) => m.id === sentId) ? prev : [...prev, res.data],
           );
+          const bump = (rows: CommMessage[]) =>
+            rows.map((r) =>
+              r.id === replyParentId
+                ? { ...r, replyCount: r.replyCount + 1 }
+                : r,
+            );
+          setLiveMsgs((prev) => {
+            const next: typeof prev = {};
+            for (const [k, rows] of Object.entries(prev)) {
+              next[k] = bump(rows);
+            }
+            return next;
+          });
+          setThreadParent((prev) =>
+            prev && prev.id === replyParentId
+              ? { ...prev, replyCount: prev.replyCount + 1 }
+              : prev,
+          );
+        } else {
+          setLiveMsgs((prev) => {
+            const cur = prev[key] ?? [];
+            if (cur.some((m) => m.id === sentId)) return prev;
+            return { ...prev, [key]: [...cur, res.data] };
+          });
+          setLoaded((prev) => new Set(prev).add(key));
         }
+        setReplyingTo(null);
         for (const file of files) {
           const up = await addMessageAttachmentAction(sentId, file);
           if (!up.success) {
@@ -602,6 +660,23 @@ export function MessagesApp() {
       const ch = await getCommChannelsAction();
       if (ch.success) setChannels(ch.data);
       toast.success("Channel joined");
+    })();
+  }
+
+  function handleLeaveWorkspace() {
+    if (isBrand) return;
+    void (async () => {
+      const res = await leaveWorkspaceAction();
+      if (!res.success) {
+        toast.error(res.error);
+        return;
+      }
+      const ch = await getCommChannelsAction();
+      if (ch.success) setChannels(ch.data);
+      const browse = await browseCommChannelsAction();
+      if (browse.success) setBrowseChannels(browse.data);
+      setShowInfo(false);
+      toast.success(res.data.message);
     })();
   }
 
@@ -880,6 +955,7 @@ export function MessagesApp() {
           channelId={!isBrand ? (activeChannelId ?? undefined) : undefined}
           onInviteChannel={handleInviteToChannel}
           onLeaveChannel={handleLeaveChannel}
+          onLeaveWorkspace={!isBrand ? handleLeaveWorkspace : undefined}
         />
       )}
 

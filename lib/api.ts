@@ -1679,6 +1679,15 @@ export async function deleteDmThread(
   });
 }
 
+export async function leaveWorkspace(
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/creator/comms/workspace/leave", {
+    method: "POST",
+    forwardCookies,
+  });
+}
+
 export async function listChannelMessages(
   channelId: string,
   params: { before?: string; limit?: number },
