@@ -8,6 +8,8 @@ import {
   browseCommChannels as apiBrowseCommChannels,
   createCommChannel as apiCreateCommChannel,
   deleteChannelMessage as apiDeleteChannelMessage,
+  deleteCommChannel as apiDeleteCommChannel,
+  deleteDmThread as apiDeleteDmThread,
   editChannelMessage as apiEditChannelMessage,
   getCommChannel as apiGetCommChannel,
   getThreadReplies as apiGetThreadReplies,
@@ -154,6 +156,18 @@ export async function archiveCommChannelAction(
   channelId: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiArchiveCommChannel(channelId, c));
+}
+
+export async function deleteCommChannelAction(
+  channelId: string,
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiDeleteCommChannel(channelId, c));
+}
+
+export async function deleteDmThreadAction(
+  threadId: string,
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiDeleteDmThread(threadId, c));
 }
 
 export async function editChannelMessageAction(

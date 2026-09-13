@@ -8,6 +8,10 @@ import {
   addMessageAttachmentAction,
   browseCommChannelsAction,
   createCommChannelAction,
+  deleteChannelMessageAction,
+  deleteCommChannelAction,
+  deleteDmThreadAction,
+  editChannelMessageAction,
   getChannelMessagesAction,
   getCommChannelsAction,
   getDmMessagesAction,
@@ -21,8 +25,6 @@ import {
   markDmReadAction,
   sendChannelMessageAction,
   sendDmMessageAction,
-  deleteChannelMessageAction,
-  editChannelMessageAction,
 } from "@/app/actions/comms";
 import { getMessageReactionsAction } from "@/app/actions/comms-reactions";
 import type { CommChannel, CommMessage, DmThread } from "@/lib/api";
@@ -662,6 +664,57 @@ export function MessagesApp() {
     return true;
   }
 
+  function handleDeleteConversation(id: string) {
+    // Creator branch: DM rows delete for real; anything else keeps the
+    // existing (brand-mock) behavior.
+    if (!isBrand && id.startsWith("dm:")) {
+      const threadId = id.slice(3);
+      if (!isServerId(threadId)) return;
+      void (async () => {
+        const res = await deleteDmThreadAction(threadId);
+        if (!res.success) {
+          toast.error(res.error);
+          return;
+        }
+        setThreads((prev) => prev.filter((t) => t.id !== threadId));
+        setLiveMsgs((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        if (activeConvoId === id) {
+          setActiveId(null);
+          setMobileView("list");
+        }
+        toast.success("Conversation deleted");
+      })();
+      return;
+    }
+    deleteBrandConversation(id);
+  }
+
+  function handleDeleteChannel(channelId: string) {
+    if (isBrand || !isServerId(channelId)) return;
+    void (async () => {
+      const res = await deleteCommChannelAction(channelId);
+      if (!res.success) {
+        toast.error(res.error);
+        return;
+      }
+      setChannels((prev) => prev.filter((c) => c.id !== channelId));
+      setLiveMsgs((prev) => {
+        const next = { ...prev };
+        delete next[`ch:${channelId}`];
+        return next;
+      });
+      if (activeChannelId === channelId) {
+        setActiveId(null);
+        setMobileView("list");
+      }
+      toast.success("Channel deleted");
+    })();
+  }
+
   function handleSelect(id: string) {
     if (activeId === "create-workspace" || activeId === "create-group") {
       // If we have unsaved progress, show prompt
@@ -704,10 +757,11 @@ export function MessagesApp() {
           isBrand={isBrand}
           conversations={conversations}
           draftState={draftState}
-          onDeleteConversation={deleteBrandConversation}
+          onDeleteConversation={handleDeleteConversation}
           browseChannels={isBrand ? [] : browseChannels}
           onJoinChannel={handleJoinChannel}
           onCreateChannel={isBrand ? undefined : handleCreateChannel}
+          onDeleteChannel={isBrand ? undefined : handleDeleteChannel}
         />
       </div>
 

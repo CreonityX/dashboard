@@ -6,9 +6,12 @@ import { Button, Switch } from "@heroui/react";
 import { TrashBin } from "@gravity-ui/icons";
 import { toast } from "sonner";
 import {
+  blockUserAction,
   exportSettingsDataAction,
+  getDeletionRequestStatusAction,
   getPrivacySettingsAction,
   listUserBlocksAction,
+  requestDataDeletionAction,
   unblockUserAction,
   updatePrivacySettingsAction,
 } from "@/app/actions/settings";
@@ -71,6 +74,9 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
     void listUserBlocksAction(isBrand).then((r) => {
       if (r.success) setBlockedUsers(r.data);
     });
+    void getDeletionRequestStatusAction(isBrand).then((r) => {
+      if (r.success && r.data.status !== "none") setDeletionStatus(r.data);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBrand]);
 
@@ -94,6 +100,11 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
 
   const [isManageBlockedOpen, setIsManageBlockedOpen] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<UserBlock[]>([]);
+  const [blockEmail, setBlockEmail] = useState("");
+  const [deletionStatus, setDeletionStatus] = useState<{
+    status: string;
+    requestedAt: string;
+  } | null>(null);
 
   async function handleUnblock(user: UserBlock) {
     const r = await unblockUserAction(isBrand, user.blockedUserId);
@@ -103,6 +114,34 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
     }
     setBlockedUsers((prev) => prev.filter((u) => u.id !== user.id));
     toast.success("User unblocked");
+  }
+
+  async function handleBlock() {
+    if (!blockEmail.includes("@")) {
+      toast.error("Enter a valid email address");
+      return;
+    }
+    const r = await blockUserAction(isBrand, { email: blockEmail.trim() });
+    if (!r.success) {
+      toast.error(r.error);
+      return;
+    }
+    setBlockEmail("");
+    const list = await listUserBlocksAction(isBrand);
+    if (list.success) setBlockedUsers(list.data);
+    toast.success("User blocked");
+  }
+
+  async function handleDeletionRequest() {
+    const r = await requestDataDeletionAction(isBrand);
+    if (!r.success) {
+      toast.error(r.error);
+      return;
+    }
+    setDeletionStatus(r.data);
+    toast.success("Deletion request sent", {
+      description: "We will process your request within 30 days.",
+    });
   }
 
   async function handleDownloadData() {
@@ -483,6 +522,23 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
           </h3>
 
           <div className="border border-[#e4e4e7] dark:border-[#27272a] bg-white dark:bg-[#111111] rounded-2xl flex flex-col overflow-hidden transition-all duration-300">
+            <div className="flex items-center gap-2 px-6 py-4 border-b border-[#f4f4f5] dark:border-[#1f1f1f]">
+              <input
+                value={blockEmail}
+                onChange={(e) => setBlockEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleBlock();
+                }}
+                placeholder="Block by email"
+                className="flex-1 min-w-0 h-9 px-3 rounded-xl border border-[#e4e4e7] dark:border-[#27272a] bg-white dark:bg-[#111111] text-[14px] text-[#0a0a0a] dark:text-white outline-none placeholder:text-[#a1a1aa]"
+              />
+              <Button
+                onClick={() => void handleBlock()}
+                className="bg-[#f4f4f5] hover:bg-[#e4e4e7] dark:bg-[#1f1f1f] dark:hover:bg-[#27272a] text-[#0a0a0a] dark:text-white font-medium rounded-xl h-9 px-4 transition-colors"
+              >
+                Block
+              </Button>
+            </div>
             <div
               className={`flex items-center justify-between px-6 py-4 min-h-[72px] transition-colors ${isManageBlockedOpen ? "border-b border-[#f4f4f5] dark:border-[#1f1f1f] bg-gray-50/50 dark:bg-white/[0.02]" : ""}`}
             >
@@ -578,21 +634,27 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
                 }
               >
                 Download my data
-              </Button>
+              </Button>{" "}
               <Button
-                onClick={() =>
-                  toast.success("Deletion request sent", {
-                    description: "We will process your request within 30 days.",
-                  })
-                }
+                onClick={() => void handleDeletionRequest()}
+                isDisabled={deletionStatus !== null}
                 variant="flat"
                 color="danger"
                 className="font-medium rounded-xl h-10 px-5 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400"
                 startContent={<TrashBin className="w-4 h-4" />}
               >
-                Request data deletion
+                {deletionStatus
+                  ? "Deletion requested"
+                  : "Request data deletion"}
               </Button>
             </div>
+            {deletionStatus && (
+              <p className="text-[13px] text-[#737373] dark:text-[#a1a1aa]">
+                Request filed on{" "}
+                {new Date(deletionStatus.requestedAt).toLocaleDateString()}. We
+                will process it within 30 days.
+              </p>
+            )}
           </div>
         </div>
       </div>

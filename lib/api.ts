@@ -415,6 +415,18 @@ export async function listUserBlocks(
   });
 }
 
+export async function blockUser(
+  isBrand: boolean,
+  payload: { blockedUserId?: string; email?: string },
+  forwardCookies: string,
+): Promise<UserBlock> {
+  return apiFetch<UserBlock>(`${settingsBase(isBrand)}/blocks`, {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
 export async function unblockUser(
   isBrand: boolean,
   blockedUserId: string,
@@ -433,6 +445,32 @@ export async function exportSettingsData(
   return apiFetch<Record<string, unknown>>(`${settingsBase(isBrand)}/export`, {
     forwardCookies,
   });
+}
+
+export type DeletionRequestStatus = {
+  status: string;
+  requestedAt: string;
+  processedAt: string | null;
+};
+
+export async function getDeletionRequestStatus(
+  isBrand: boolean,
+  forwardCookies: string,
+): Promise<DeletionRequestStatus> {
+  return apiFetch<DeletionRequestStatus>(
+    `${settingsBase(isBrand)}/deletion-request`,
+    { forwardCookies },
+  );
+}
+
+export async function requestDataDeletion(
+  isBrand: boolean,
+  forwardCookies: string,
+): Promise<DeletionRequestStatus> {
+  return apiFetch<DeletionRequestStatus>(
+    `${settingsBase(isBrand)}/deletion-request`,
+    { method: "POST", forwardCookies },
+  );
 }
 
 // ── Social accounts (creator OAuth) ───────────────────────────────────────────
@@ -1619,6 +1657,26 @@ export async function archiveCommChannel(
     `/creator/comms/channels/${channelId}/archive`,
     { method: "POST", forwardCookies },
   );
+}
+
+export async function deleteCommChannel(
+  channelId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/channels/${channelId}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
+
+export async function deleteDmThread(
+  threadId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/dms/${threadId}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
 }
 
 export async function listChannelMessages(

@@ -3,11 +3,15 @@
 import { cookies } from "next/headers";
 import {
   ApiCallError,
+  blockUser as apiBlock,
   exportSettingsData as apiExport,
+  getDeletionRequestStatus as apiDeletionStatus,
   getPrivacySettings as apiGet,
   listUserBlocks as apiListBlocks,
+  requestDataDeletion as apiRequestDeletion,
   unblockUser as apiUnblock,
   updatePrivacySettings as apiUpdate,
+  type DeletionRequestStatus,
   type PrivacySettings,
   type UserBlock,
 } from "@/lib/api";
@@ -64,6 +68,25 @@ export async function unblockUserAction(
   blockedUserId: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiUnblock(isBrand, blockedUserId, c));
+}
+
+export async function blockUserAction(
+  isBrand: boolean,
+  payload: { blockedUserId?: string; email?: string },
+): Promise<ActionResult<UserBlock>> {
+  return authed((c) => apiBlock(isBrand, payload, c));
+}
+
+export async function getDeletionRequestStatusAction(
+  isBrand: boolean,
+): Promise<ActionResult<DeletionRequestStatus>> {
+  return authed((c) => apiDeletionStatus(isBrand, c));
+}
+
+export async function requestDataDeletionAction(
+  isBrand: boolean,
+): Promise<ActionResult<DeletionRequestStatus>> {
+  return authed((c) => apiRequestDeletion(isBrand, c));
 }
 
 export async function exportSettingsDataAction(

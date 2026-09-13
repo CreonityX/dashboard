@@ -386,6 +386,7 @@ type ConversationListProps = {
   browseChannels?: Array<{ id: string; name: string }>;
   onJoinChannel?: (id: string) => void;
   onCreateChannel?: (name: string, isPrivate: boolean) => boolean;
+  onDeleteChannel?: (id: string) => void;
 };
 
 export function BlueSwitch({
@@ -426,6 +427,7 @@ export function ConversationList({
   browseChannels = [],
   onJoinChannel,
   onCreateChannel,
+  onDeleteChannel,
 }: ConversationListProps) {
   const { createBrandCommunity, createBrandChannel, createBrandGroup } =
     useAccount();
@@ -1179,26 +1181,41 @@ export function ConversationList({
                             e.stopPropagation();
                             onSelect(`${c.id}:${ch.id}`);
                           }}
-                          className={`flex items-center justify-between rounded-xl px-3 py-1.5 text-left text-[13px] font-medium transition-colors ${
+                          className={`group/ch flex items-center justify-between rounded-xl px-3 py-1.5 text-left text-[13px] font-medium transition-colors ${
                             activeId === `${c.id}:${ch.id}`
                               ? "bg-black/5 text-black dark:bg-white/10 dark:text-white"
                               : "text-[#737373] hover:bg-[#fafafa] dark:text-[#a1a1aa] dark:hover:bg-[#18181b]"
                           }`}
                         >
-                          <span className="flex items-center gap-2">
+                          <span className="flex min-w-0 items-center gap-2">
                             <span className="text-[14px] text-[#a1a1aa] dark:text-[#737373]">
                               #
                             </span>
-                            {ch.name}
+                            <span className="truncate">{ch.name}</span>
                             {ch.private && (
-                              <Lock className="h-3 w-3 text-[#a1a1aa] dark:text-[#737373]" />
+                              <Lock className="h-3 w-3 shrink-0 text-[#a1a1aa] dark:text-[#737373]" />
                             )}
                           </span>
-                          {ch.unread ? (
-                            <span className="flex h-5 items-center justify-center rounded-full bg-[#0a0a0a] px-2 text-[11px] font-bold text-white dark:bg-white dark:text-[#0a0a0a]">
-                              {ch.unread}
-                            </span>
-                          ) : null}
+                          <span className="flex shrink-0 items-center gap-1">
+                            {onDeleteChannel && (
+                              <span
+                                role="button"
+                                aria-label="Delete channel"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteChannel(ch.id);
+                                }}
+                                className="hidden h-5 w-5 items-center justify-center rounded-md text-[#a1a1aa] hover:bg-black/10 hover:text-[#ef4444] group-hover/ch:flex dark:hover:bg-white/10"
+                              >
+                                <Xmark className="h-3.5 w-3.5" />
+                              </span>
+                            )}
+                            {ch.unread ? (
+                              <span className="flex h-5 items-center justify-center rounded-full bg-[#0a0a0a] px-2 text-[11px] font-bold text-white dark:bg-white dark:text-[#0a0a0a]">
+                                {ch.unread}
+                              </span>
+                            ) : null}
+                          </span>
                         </button>
                       ))}
                       <button
