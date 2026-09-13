@@ -320,6 +320,36 @@ export async function updatePortfolioItem(
   });
 }
 
+export async function createPortfolioItem(
+  payload: {
+    title: string;
+    imageUrl?: string;
+    platform?: string;
+    sourceUrl?: string;
+    tab?: string;
+    duration?: string;
+    views?: number;
+    isHidden?: boolean;
+  },
+  forwardCookies: string,
+): Promise<PortfolioItem> {
+  return apiFetch<PortfolioItem>("/creator/profile/portfolio", {
+    method: "POST",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function deletePortfolioItem(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/profile/portfolio/${id}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
+
 export async function reorderPortfolioItems(
   ids: string[],
   forwardCookies: string,
@@ -360,10 +390,9 @@ export async function connectSocialAccount(
   platform: string,
   forwardCookies: string,
 ): Promise<{ authUrl: string }> {
-  return apiFetch<{ authUrl: string }>(
-    `/creator/social/connect/${platform}`,
-    { forwardCookies },
-  );
+  return apiFetch<{ authUrl: string }>(`/creator/social/connect/${platform}`, {
+    forwardCookies,
+  });
 }
 
 // ── Support tickets (creator + brand "my tickets") ────────────────────────────

@@ -3,6 +3,8 @@
 import { cookies } from "next/headers";
 import {
   ApiCallError,
+  createPortfolioItem as apiCreate,
+  deletePortfolioItem as apiDelete,
   listPortfolioItems as apiList,
   reorderPortfolioItems as apiReorder,
   updatePortfolioItem as apiUpdate,
@@ -16,7 +18,8 @@ async function getCookieHeader(): Promise<string | undefined> {
   return all.map((c) => `${c.name}=${c.value}`).join("; ");
 }
 
-type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
+type ActionResult<T> =
+  { success: true; data: T } | { success: false; error: string };
 
 function errToString(err: unknown): string {
   if (err instanceof ApiCallError) return err.message;
@@ -24,7 +27,9 @@ function errToString(err: unknown): string {
   return "Unexpected error";
 }
 
-async function authed<T>(fn: (cookies: string) => Promise<T>): Promise<ActionResult<T>> {
+async function authed<T>(
+  fn: (cookies: string) => Promise<T>,
+): Promise<ActionResult<T>> {
   try {
     const header = await getCookieHeader();
     if (!header) return { success: false, error: "Not authenticated." };
@@ -34,7 +39,9 @@ async function authed<T>(fn: (cookies: string) => Promise<T>): Promise<ActionRes
   }
 }
 
-export async function listPortfolioAction(): Promise<ActionResult<PortfolioItem[]>> {
+export async function listPortfolioAction(): Promise<
+  ActionResult<PortfolioItem[]>
+> {
   return authed((c) => apiList(c));
 }
 
@@ -43,6 +50,18 @@ export async function updatePortfolioItemAction(
   payload: Parameters<typeof apiUpdate>[1],
 ): Promise<ActionResult<PortfolioItem>> {
   return authed((c) => apiUpdate(id, payload, c));
+}
+
+export async function createPortfolioItemAction(
+  payload: Parameters<typeof apiCreate>[0],
+): Promise<ActionResult<PortfolioItem>> {
+  return authed((c) => apiCreate(payload, c));
+}
+
+export async function deletePortfolioItemAction(
+  id: string,
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiDelete(id, c));
 }
 
 export async function reorderPortfolioAction(
