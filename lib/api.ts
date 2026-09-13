@@ -361,6 +361,38 @@ export async function reorderPortfolioItems(
   });
 }
 
+// ── Privacy settings (creator) ──────────────────────────────────────────────
+
+export type PrivacySettings = {
+  visibility: "public" | "members" | "private";
+  showOnlineStatus: boolean;
+  showActivityStatus: boolean;
+  shareAnalytics: boolean;
+  allowIndexing: boolean;
+  messagePrivacy: "everyone" | "verified_only" | "connections_only";
+  readReceipts: boolean;
+  typingIndicators: boolean;
+};
+
+export async function getPrivacySettings(
+  forwardCookies: string,
+): Promise<PrivacySettings> {
+  return apiFetch<PrivacySettings>("/creator/settings/privacy", {
+    forwardCookies,
+  });
+}
+
+export async function updatePrivacySettings(
+  payload: Partial<PrivacySettings>,
+  forwardCookies: string,
+): Promise<PrivacySettings> {
+  return apiFetch<PrivacySettings>("/creator/settings/privacy", {
+    method: "PATCH",
+    body: payload,
+    forwardCookies,
+  });
+}
+
 // ── Social accounts (creator OAuth) ───────────────────────────────────────────
 
 export type SocialAccount = {
@@ -460,6 +492,16 @@ export async function disconnectSocialAccount(
   return apiFetch<{ message: string }>(
     `/creator/social/disconnect/${platform}`,
     { method: "DELETE", forwardCookies },
+  );
+}
+
+export async function triggerSocialSync(
+  platform: string,
+  forwardCookies: string,
+): Promise<{ message: string; jobId: string }> {
+  return apiFetch<{ message: string; jobId: string }>(
+    `/creator/social/sync/${platform}`,
+    { method: "POST", forwardCookies },
   );
 }
 
@@ -1388,6 +1430,68 @@ export async function createCommChannel(
   });
 }
 
+export async function getCommChannel(
+  channelId: string,
+  forwardCookies: string,
+): Promise<CommChannel> {
+  return apiFetch<CommChannel>(`/creator/comms/channels/${channelId}`, {
+    forwardCookies,
+  });
+}
+
+export async function updateCommChannel(
+  channelId: string,
+  payload: { name?: string; description?: string },
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/channels/${channelId}`, {
+    method: "PATCH",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function joinCommChannel(
+  channelId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/comms/channels/${channelId}/join`,
+    { method: "POST", forwardCookies },
+  );
+}
+
+export async function leaveCommChannel(
+  channelId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/comms/channels/${channelId}/leave`,
+    { method: "POST", forwardCookies },
+  );
+}
+
+export async function inviteToCommChannel(
+  channelId: string,
+  userId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/comms/channels/${channelId}/invite`,
+    { method: "POST", body: { userId }, forwardCookies },
+  );
+}
+
+export async function archiveCommChannel(
+  channelId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/comms/channels/${channelId}/archive`,
+    { method: "POST", forwardCookies },
+  );
+}
+
 export async function listChannelMessages(
   channelId: string,
   params: { before?: string; limit?: number },
@@ -1417,6 +1521,38 @@ export async function sendChannelMessage(
       body: payload,
       forwardCookies,
     },
+  );
+}
+
+export async function editChannelMessage(
+  messageId: string,
+  body: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/messages/${messageId}`, {
+    method: "PATCH",
+    body: { body },
+    forwardCookies,
+  });
+}
+
+export async function deleteChannelMessage(
+  messageId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/comms/messages/${messageId}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
+
+export async function getThreadReplies(
+  messageId: string,
+  forwardCookies: string,
+): Promise<CommMessage[]> {
+  return apiFetch<CommMessage[]>(
+    `/creator/comms/messages/${messageId}/thread`,
+    { forwardCookies },
   );
 }
 

@@ -1041,6 +1041,8 @@ export function MessageItem({
   message,
   isGrouped = false,
   onReply,
+  onEdit,
+  onDelete,
   onReschedule,
   onResolveReview,
   reactions: initialReactions = [],
@@ -1049,6 +1051,8 @@ export function MessageItem({
   message: Message;
   isGrouped?: boolean;
   onReply?: (message: Message) => void;
+  onEdit?: (message: Message, body: string) => void;
+  onDelete?: (message: Message) => void;
   onReschedule?: (message: Message, newDate: string, newTime: string) => void;
   onResolveReview?: (status: "approved" | "changes_requested") => void;
   reactions?: MessageReaction[];
@@ -1061,6 +1065,8 @@ export function MessageItem({
     useState<MessageReaction[]>(initialReactions);
   useEffect(() => setReactions(initialReactions), [message.id]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
   const [viewerOpen, setViewerOpen] = useState(false);
   const timerRef = useRef<NodeJS.Timeout>();
 
@@ -1116,12 +1122,37 @@ export function MessageItem({
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchEnd}
           >
-            {renderCard(
-              message,
-              mine,
-              () => setViewerOpen(true),
-              (newDate, newTime) => onReschedule?.(message, newDate, newTime),
-              onResolveReview,
+            {editing ? (
+              <div
+                className={cn(
+                  "flex flex-col rounded-3xl px-4 py-2.5 text-[15px] leading-relaxed max-w-[340px]",
+                  mine ? bubble.mine : bubble.them,
+                )}
+              >
+                <input
+                  autoFocus
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && onEdit) {
+                      onEdit(message, draft);
+                      setEditing(false);
+                    } else if (e.key === "Escape") {
+                      setEditing(false);
+                    }
+                  }}
+                  onBlur={() => setEditing(false)}
+                  className="w-full min-w-[200px] bg-transparent outline-none"
+                />
+              </div>
+            ) : (
+              renderCard(
+                message,
+                mine,
+                () => setViewerOpen(true),
+                (newDate, newTime) => onReschedule?.(message, newDate, newTime),
+                onResolveReview,
+              )
             )}
           </div>
 
@@ -1153,15 +1184,26 @@ export function MessageItem({
                 onAction={(key) => {
                   if (key === "reply") {
                     if (onReply) onReply(message);
-                  } else if (key === "edit")
-                    toast.info("Coming Soon", {
-                      description: "Message editing is not yet available.",
-                    });
-                  else if (key === "delete")
-                    toast.success("Message Deleted", {
-                      description: "The message has been removed.",
-                    });
-                  else if (key === "unsend")
+                  } else if (key === "edit") {
+                    if (message.kind === "text" && onEdit) {
+                      setDraft(
+                        typeof (message as { text?: unknown }).text === "string"
+                          ? (message as { text: string }).text
+                          : "",
+                      );
+                      setEditing(true);
+                    } else {
+                      toast.info("Coming Soon", {
+                        description: "Message editing is not yet available.",
+                      });
+                    }
+                  } else if (key === "delete") {
+                    if (onDelete) onDelete(message);
+                    else
+                      toast.success("Message Deleted", {
+                        description: "The message has been removed.",
+                      });
+                  } else if (key === "unsend")
                     toast.success("Message Unsent", {
                       description: "The message has been unsent.",
                     });

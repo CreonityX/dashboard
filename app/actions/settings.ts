@@ -3,11 +3,9 @@
 import { cookies } from "next/headers";
 import {
   ApiCallError,
-  connectSocialAccount as apiConnect,
-  disconnectSocialAccount as apiDisconnect,
-  listSocialAccounts as apiList,
-  triggerSocialSync as apiSync,
-  type SocialAccount,
+  getPrivacySettings as apiGet,
+  updatePrivacySettings as apiUpdate,
+  type PrivacySettings,
 } from "@/lib/api";
 
 async function getCookieHeader(): Promise<string | undefined> {
@@ -38,26 +36,14 @@ async function authed<T>(
   }
 }
 
-export async function listSocialAccountsAction(): Promise<
-  ActionResult<SocialAccount[]>
+export async function getPrivacySettingsAction(): Promise<
+  ActionResult<PrivacySettings>
 > {
-  return authed((c) => apiList(c));
+  return authed((c) => apiGet(c));
 }
 
-export async function connectSocialAccountAction(
-  platform: string,
-): Promise<ActionResult<{ authUrl: string }>> {
-  return authed((c) => apiConnect(platform, c));
-}
-
-export async function disconnectSocialAccountAction(
-  platform: string,
-): Promise<ActionResult<{ message: string }>> {
-  return authed((c) => apiDisconnect(platform, c));
-}
-
-export async function triggerSocialSyncAction(
-  platform: string,
-): Promise<ActionResult<{ message: string; jobId: string }>> {
-  return authed((c) => apiSync(platform, c));
+export async function updatePrivacySettingsAction(
+  payload: Partial<PrivacySettings>,
+): Promise<ActionResult<PrivacySettings>> {
+  return authed((c) => apiUpdate(payload, c));
 }

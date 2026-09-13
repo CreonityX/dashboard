@@ -14,6 +14,8 @@ import {
   markDmReadAction,
   sendChannelMessageAction,
   sendDmMessageAction,
+  deleteChannelMessageAction,
+  editChannelMessageAction,
 } from "@/app/actions/comms";
 import { getMessageReactionsAction } from "@/app/actions/comms-reactions";
 import type { CommChannel, CommMessage, DmThread } from "@/lib/api";
@@ -457,6 +459,54 @@ export function MessagesApp() {
       }));
   }
 
+  const isServerId = (id: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+  // Creator branch: persist message edits/deletes via the API with
+  // optimistic updates + rollback (same pattern as the workspace kanban).
+  function handleEditMessage(msg: Message, body: string) {
+    if (isBrand || !isServerId(msg.id)) return;
+    const clean = body.trim();
+    if (!clean) return;
+    const prev = liveMsgs;
+    setLiveMsgs((cur) => {
+      const next: typeof cur = {};
+      for (const [key, rows] of Object.entries(cur)) {
+        next[key] = rows.map((r) =>
+          r.id === msg.id ? { ...r, body: clean } : r,
+        );
+      }
+      return next;
+    });
+    void (async () => {
+      const res = await editChannelMessageAction(msg.id, clean);
+      if (!res.success) {
+        setLiveMsgs(prev);
+        toast.error(res.error);
+      }
+    })();
+  }
+
+  function handleDeleteMessage(msg: Message) {
+    if (isBrand || !isServerId(msg.id)) return;
+    const prev = liveMsgs;
+    setLiveMsgs((cur) => {
+      const next: typeof cur = {};
+      for (const [key, rows] of Object.entries(cur)) {
+        next[key] = rows.filter((r) => r.id !== msg.id);
+      }
+      return next;
+    });
+    void (async () => {
+      const res = await deleteChannelMessageAction(msg.id);
+      if (res.success) toast.success("Message deleted");
+      else {
+        setLiveMsgs(prev);
+        toast.error(res.error);
+      }
+    })();
+  }
+
   function handleSelect(id: string) {
     if (activeId === "create-workspace" || activeId === "create-group") {
       // If we have unsaved progress, show prompt
@@ -549,6 +599,8 @@ export function MessagesApp() {
                     reactions={reactions[m.id]}
                     isGrouped={i > 0 && messages[i - 1].sender === m.sender}
                     onReply={(msg) => setReplyingTo(msg)}
+                    onEdit={!isBrand ? handleEditMessage : undefined}
+                    onDelete={!isBrand ? handleDeleteMessage : undefined}
                     onReschedule={handleReschedule}
                     onResolveReview={
                       isBrand && activeConvoId
