@@ -822,6 +822,38 @@ export async function acceptCreatorTeamInvite(
   );
 }
 
+export type TeamInvitation = {
+  id: string;
+  accountId: string;
+  accountName: string;
+  role: string;
+  invitedAt: string;
+};
+
+function teamBase(isBrand: boolean): string {
+  return isBrand ? "/brand/team-members" : "/creator/team-members";
+}
+
+export async function listTeamInvitations(
+  isBrand: boolean,
+  forwardCookies: string,
+): Promise<TeamInvitation[]> {
+  return apiFetch<TeamInvitation[]>(`${teamBase(isBrand)}/invitations`, {
+    forwardCookies,
+  });
+}
+
+export async function acceptOwnTeamInvite(
+  isBrand: boolean,
+  memberId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `${teamBase(isBrand)}/${memberId}/accept-own`,
+    { method: "POST", forwardCookies },
+  );
+}
+
 // ── Campaigns (brand side) ────────────────────────────────────────────────────
 
 export type CampaignStatus =
@@ -1422,6 +1454,15 @@ export type CommChannel = {
   createdAt: string;
 };
 
+export type CommMessageAttachment = {
+  id: string;
+  filename: string;
+  storageKey: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+};
+
 export type CommMessage = {
   id: string;
   channelId: string | null;
@@ -1433,6 +1474,7 @@ export type CommMessage = {
   createdAt: string;
   editedAt: string | null;
   deletedAt: string | null;
+  attachments?: CommMessageAttachment[];
 };
 
 export type DmThread = {
@@ -1552,13 +1594,21 @@ export async function leaveCommChannel(
 
 export async function inviteToCommChannel(
   channelId: string,
-  userId: string,
+  payload: { userId?: string; email?: string },
   forwardCookies: string,
 ): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(
     `/creator/comms/channels/${channelId}/invite`,
-    { method: "POST", body: { userId }, forwardCookies },
+    { method: "POST", body: payload, forwardCookies },
   );
+}
+
+export async function browseCommChannels(
+  forwardCookies: string,
+): Promise<CommChannel[]> {
+  return apiFetch<CommChannel[]>("/creator/comms/channels/browse", {
+    forwardCookies,
+  });
 }
 
 export async function archiveCommChannel(
@@ -1632,6 +1682,29 @@ export async function getThreadReplies(
   return apiFetch<CommMessage[]>(
     `/creator/comms/messages/${messageId}/thread`,
     { forwardCookies },
+  );
+}
+
+export async function listMessageAttachments(
+  messageId: string,
+  forwardCookies: string,
+): Promise<CommMessageAttachment[]> {
+  return apiFetch<CommMessageAttachment[]>(
+    `/creator/comms/messages/${messageId}/attachments`,
+    { forwardCookies },
+  );
+}
+
+export async function addMessageAttachment(
+  messageId: string,
+  file: File,
+  forwardCookies: string,
+): Promise<{ attachmentId: string; storageKey: string; url: string }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  return apiFetch<{ attachmentId: string; storageKey: string; url: string }>(
+    `/creator/comms/messages/${messageId}/attachments`,
+    { method: "POST", body: fd, forwardCookies },
   );
 }
 

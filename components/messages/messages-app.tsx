@@ -5,11 +5,18 @@ import { type Conversation, type Message } from "@/lib/messages-data";
 import { useAuth } from "@/context/auth-context";
 import { useRealtime, type RealtimeEvent } from "@/lib/realtime";
 import {
+  addMessageAttachmentAction,
+  browseCommChannelsAction,
+  createCommChannelAction,
   getChannelMessagesAction,
   getCommChannelsAction,
   getDmMessagesAction,
   getDmThreadsAction,
+  getThreadRepliesAction,
   getUnreadCountsAction,
+  inviteToCommChannelAction,
+  joinCommChannelAction,
+  leaveCommChannelAction,
   markChannelReadAction,
   markDmReadAction,
   sendChannelMessageAction,
@@ -64,6 +71,10 @@ export function MessagesApp() {
   >({});
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [browseChannels, setBrowseChannels] = useState<CommChannel[]>([]);
+  const [threadParent, setThreadParent] = useState<CommMessage | null>(null);
+  const [threadReplies, setThreadReplies] = useState<CommMessage[]>([]);
+  const [threadLoading, setThreadLoading] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<string | null>(null);
   const [showCancelPrompt, setShowCancelPrompt] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>(defaultDraft);
@@ -96,6 +107,18 @@ export function MessagesApp() {
     }),
     kind: "text",
     text: row.body,
+    ...(row.replyCount > 0 ? { replyCount: row.replyCount } : {}),
+    ...(row.parentMessageId ? { parentMessageId: row.parentMessageId } : {}),
+    ...((row.attachments ?? []).length > 0
+      ? {
+          attachments: (row.attachments ?? []).map((a) => ({
+            filename: a.filename,
+            url: a.storageKey.startsWith("http")
+              ? a.storageKey
+              : `/uploads/${a.storageKey}`,
+          })),
+        }
+      : {}),
   });
 
   const refreshUnread = async () => {
@@ -121,6 +144,8 @@ export function MessagesApp() {
       if (cancelled) return;
       if (ch.success) setChannels(ch.data);
       if (dm.success) setThreads(dm.data);
+      const browse = await browseCommChannelsAction();
+      if (!cancelled && browse.success) setBrowseChannels(browse.data);
       await refreshUnread();
     })();
     return () => {
@@ -325,7 +350,7 @@ export function MessagesApp() {
     }
   }, [messages, activeId]);
 
-  function handleSend(text: string) {
+  function handleSend(text: string, files: File[] = [], parentId?: string) {
     if (!activeId) return;
     sendTyping(activeChannelId ?? "", false);
     // Creator branch: persist via the API. The socket fan-out echoes
@@ -333,17 +358,18 @@ export function MessagesApp() {
     // but we also append immediately so empty states resolve fast.
     if (!isBrand) {
       void (async () => {
-        const parentId =
-          replyingTo &&
+        const replyParentId =
+          parentId ??
+          (replyingTo &&
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
             replyingTo.id,
           )
             ? replyingTo.id
-            : undefined;
+            : undefined);
         const res = activeChannelId
           ? await sendChannelMessageAction(activeChannelId, {
               body: text,
-              ...(parentId ? { parentMessageId: parentId } : {}),
+              ...(replyParentId ? { parentMessageId: replyParentId } : {}),
             })
           : activeConvoId?.startsWith("dm:")
             ? await sendDmMessageAction(activeConvoId.slice(3), text)
@@ -354,13 +380,52 @@ export function MessagesApp() {
           return;
         }
         const key = activeChannelId ? `ch:${activeChannelId}` : activeId;
+        const sentId = res.data.id;
         setLiveMsgs((prev) => {
           const cur = prev[key] ?? [];
-          if (cur.some((m) => m.id === res.data.id)) return prev;
+          if (cur.some((m) => m.id === sentId)) return prev;
           return { ...prev, [key]: [...cur, res.data] };
         });
         setLoaded((prev) => new Set(prev).add(key));
         setReplyingTo(null);
+        if (replyParentId) {
+          setThreadReplies((prev) =>
+            prev.some((m) => m.id === sentId) ? prev : [...prev, res.data],
+          );
+        }
+        for (const file of files) {
+          const up = await addMessageAttachmentAction(sentId, file);
+          if (!up.success) {
+            toast.error(up.error);
+            continue;
+          }
+          const row = {
+            id: up.data.attachmentId,
+            filename: file.name,
+            storageKey: up.data.storageKey,
+            fileSize: file.size,
+            mimeType: file.type || "application/octet-stream",
+            createdAt: new Date().toISOString(),
+          };
+          setLiveMsgs((prev) => {
+            const next: typeof prev = {};
+            for (const [k, rows] of Object.entries(prev)) {
+              next[k] = rows.map((m) =>
+                m.id === sentId
+                  ? { ...m, attachments: [...(m.attachments ?? []), row] }
+                  : m,
+              );
+            }
+            return next;
+          });
+          setThreadReplies((prev) =>
+            prev.map((m) =>
+              m.id === sentId
+                ? { ...m, attachments: [...(m.attachments ?? []), row] }
+                : m,
+            ),
+          );
+        }
       })();
       return;
     }
@@ -507,6 +572,96 @@ export function MessagesApp() {
     })();
   }
 
+  function openThread(msg: Message) {
+    if (isBrand || !isServerId(msg.id)) return;
+    const row = Object.values(liveMsgs)
+      .flat()
+      .find((r) => r.id === msg.id);
+    if (!row) return;
+    setThreadParent(row);
+    setThreadReplies([]);
+    setThreadLoading(true);
+    void getThreadRepliesAction(msg.id).then((r) => {
+      setThreadLoading(false);
+      if (r.success) setThreadReplies(r.data);
+      else toast.error(r.error);
+    });
+  }
+
+  function handleJoinChannel(channelId: string) {
+    if (isBrand) return;
+    void (async () => {
+      const res = await joinCommChannelAction(channelId);
+      if (!res.success) {
+        toast.error(res.error);
+        return;
+      }
+      setBrowseChannels((prev) => prev.filter((c) => c.id !== channelId));
+      const ch = await getCommChannelsAction();
+      if (ch.success) setChannels(ch.data);
+      toast.success("Channel joined");
+    })();
+  }
+
+  function handleLeaveChannel(channelId: string) {
+    if (isBrand || !channelId) return;
+    void (async () => {
+      const res = await leaveCommChannelAction(channelId);
+      if (!res.success) {
+        toast.error(res.error);
+        return;
+      }
+      setChannels((prev) => prev.filter((c) => c.id !== channelId));
+      setLiveMsgs((prev) => {
+        const next = { ...prev };
+        delete next[`ch:${channelId}`];
+        return next;
+      });
+      if (activeChannelId === channelId) {
+        setActiveId(null);
+        setMobileView("list");
+      }
+      setShowInfo(false);
+      const browse = await browseCommChannelsAction();
+      if (browse.success) setBrowseChannels(browse.data);
+      toast.success("Channel left");
+    })();
+  }
+
+  function handleInviteToChannel(channelId: string, email: string) {
+    if (isBrand || !email.includes("@")) {
+      if (!email.includes("@")) toast.error("Enter a valid email address");
+      return;
+    }
+    void (async () => {
+      const res = await inviteToCommChannelAction(channelId, { email });
+      if (res.success) toast.success("Invitation sent");
+      else toast.error(res.error);
+    })();
+  }
+
+  function handleCreateChannel(name: string, isPrivate: boolean) {
+    if (isBrand) return false;
+    const clean = name.trim().replace(/\s+/g, "-").toLowerCase();
+    if (!clean) return false;
+    void (async () => {
+      const res = await createCommChannelAction({
+        name: clean,
+        ...(isPrivate ? { isPrivate: true } : {}),
+      });
+      if (!res.success) {
+        toast.error(res.error);
+        return;
+      }
+      const ch = await getCommChannelsAction();
+      if (ch.success) setChannels(ch.data);
+      setActiveId(`${workspaceId ?? "workspace"}:${res.data.id}`);
+      setMobileView("chat");
+      toast.success("Channel created");
+    })();
+    return true;
+  }
+
   function handleSelect(id: string) {
     if (activeId === "create-workspace" || activeId === "create-group") {
       // If we have unsaved progress, show prompt
@@ -550,6 +705,9 @@ export function MessagesApp() {
           conversations={conversations}
           draftState={draftState}
           onDeleteConversation={deleteBrandConversation}
+          browseChannels={isBrand ? [] : browseChannels}
+          onJoinChannel={handleJoinChannel}
+          onCreateChannel={isBrand ? undefined : handleCreateChannel}
         />
       </div>
 
@@ -601,6 +759,7 @@ export function MessagesApp() {
                     onReply={(msg) => setReplyingTo(msg)}
                     onEdit={!isBrand ? handleEditMessage : undefined}
                     onDelete={!isBrand ? handleDeleteMessage : undefined}
+                    onViewThread={!isBrand ? openThread : undefined}
                     onReschedule={handleReschedule}
                     onResolveReview={
                       isBrand && activeConvoId
@@ -664,7 +823,56 @@ export function MessagesApp() {
         <InfoPanel
           conversation={conversation}
           onClose={() => setShowInfo(false)}
+          channelId={!isBrand ? (activeChannelId ?? undefined) : undefined}
+          onInviteChannel={handleInviteToChannel}
+          onLeaveChannel={handleLeaveChannel}
         />
+      )}
+
+      {/* Thread panel */}
+      {threadParent && (
+        <aside className="absolute inset-0 z-50 flex h-full w-full shrink-0 flex-col overflow-hidden bg-white dark:bg-[#0a0a0a] xl:relative xl:w-[340px] xl:border-l xl:border-[#efefef] xl:dark:border-white/10">
+          <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-[#efefef] dark:border-white/10 px-4">
+            <span className="text-[15px] font-bold text-[#0a0a0a] dark:text-white">
+              Thread
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setThreadParent(null);
+                setThreadReplies([]);
+              }}
+              className="rounded-lg px-3 py-1.5 text-[13px] font-semibold text-[#737373] dark:text-[#a1a1aa] hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              Close
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            <div className="flex flex-col">
+              <MessageItem message={toUiMessage(threadParent)} />
+              {threadLoading ? (
+                <p className="py-4 text-center text-[13px] text-[#737373] dark:text-[#a1a1aa]">
+                  Loading replies…
+                </p>
+              ) : (
+                threadReplies.map((r, i) => (
+                  <MessageItem
+                    key={r.id}
+                    message={toUiMessage(r)}
+                    isGrouped={
+                      i > 0 && threadReplies[i - 1]?.authorId === r.authorId
+                    }
+                  />
+                ))
+              )}
+            </div>
+          </div>
+          <Composer
+            onSend={(text, files) => {
+              if (threadParent) handleSend(text, files, threadParent.id);
+            }}
+          />
+        </aside>
       )}
 
       {showCancelPrompt && (

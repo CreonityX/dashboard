@@ -4,12 +4,14 @@ import { cookies } from "next/headers";
 import {
   ApiCallError,
   acceptCreatorTeamInvite as apiAcceptCreatorMember,
+  acceptOwnTeamInvite as apiAcceptOwn,
   getMyBrand as apiGetMyBrand,
   getPublicBrandProfile as apiGetPublicBrandProfile,
   inviteBrandMember as apiInviteBrandMember,
   inviteCreatorMember as apiInviteCreatorMember,
   listBrandTeam as apiListBrandTeam,
   listCreatorTeam as apiListCreatorTeam,
+  listTeamInvitations as apiListInvitations,
   removeBrandMember as apiRemoveBrandMember,
   removeCreatorMember as apiRemoveCreatorMember,
   updateBrandMemberRole as apiUpdateBrandMemberRole,
@@ -17,6 +19,7 @@ import {
   updateMyBrand as apiUpdateMyBrand,
   type BrandProfile,
   type PublicBrandProfile,
+  type TeamInvitation,
   type TeamMember,
   type UpdateBrandProfilePayload,
 } from "@/lib/api";
@@ -128,4 +131,17 @@ export async function acceptCreatorTeamInviteAction(
   token: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiAcceptCreatorMember(memberId, token, c));
+}
+
+export async function listTeamInvitationsAction(
+  isBrand: boolean,
+): Promise<ActionResult<TeamInvitation[]>> {
+  return authed((c) => apiListInvitations(isBrand, c));
+}
+
+export async function acceptOwnTeamInviteAction(
+  isBrand: boolean,
+  memberId: string,
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiAcceptOwn(isBrand, memberId, c));
 }

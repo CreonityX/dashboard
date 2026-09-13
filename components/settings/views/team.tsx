@@ -20,9 +20,11 @@ import {
   inviteCreatorMemberAction,
   removeCreatorMemberAction,
   updateCreatorMemberRoleAction,
+  listTeamInvitationsAction,
+  acceptOwnTeamInviteAction,
 } from "@/app/actions/brand";
 import { useAccount } from "@/context/account-context";
-import type { TeamMember } from "@/lib/api";
+import type { TeamInvitation, TeamMember } from "@/lib/api";
 
 const BRAND_ROLES = ["Owner", "Admin", "Campaign manager", "Viewer"] as const;
 const CREATOR_ROLES = ["Owner", "Manager", "Editor", "Viewer"] as const;
@@ -90,6 +92,7 @@ export function TeamView({ onBack }: { onBack?: () => void }) {
   const { isBrand } = useAccount();
   const UI_ROLES = isBrand ? BRAND_ROLES : CREATOR_ROLES;
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>(defaultInviteRole(isBrand));
   const [loading, setLoading] = useState(true);
@@ -100,6 +103,8 @@ export function TeamView({ onBack }: { onBack?: () => void }) {
       : await getCreatorTeamAction();
     if (res.success) setMembers(res.data.members);
     else toast.error(res.error);
+    const inbox = await listTeamInvitationsAction(isBrand);
+    if (inbox.success) setInvitations(inbox.data);
     setLoading(false);
   };
 
@@ -136,6 +141,15 @@ export function TeamView({ onBack }: { onBack?: () => void }) {
       ? await removeBrandMemberAction(id)
       : await removeCreatorMemberAction(id);
     if (!res.success) return toast.error(res.error);
+    await load();
+  };
+
+  const accept = async (id: string) => {
+    const res = await acceptOwnTeamInviteAction(isBrand, id);
+    if (!res.success) return toast.error(res.error);
+    toast.success("Invite accepted", {
+      description: "Welcome to the team.",
+    });
     await load();
   };
 
@@ -224,6 +238,30 @@ export function TeamView({ onBack }: { onBack?: () => void }) {
                   </p>
                 </div>
                 <SettingsBadge tone="warning">Pending</SettingsBadge>
+              </SettingsCard>
+            ))}
+          </div>
+        </SettingsSection>
+      )}
+      {invitations.length > 0 && (
+        <SettingsSection title="Your invitations">
+          <div className="flex flex-col gap-3">
+            {invitations.map((inv) => (
+              <SettingsCard
+                key={inv.id}
+                className="flex items-center justify-between gap-3"
+              >
+                <div>
+                  <p className="font-semibold text-[#0a0a0a] dark:text-white">
+                    {inv.accountName}
+                  </p>
+                  <p className="text-sm text-[#71717a]">
+                    {toUiRole(isBrand, inv.role)}
+                  </p>
+                </div>
+                <SettingsActionButton onClick={() => accept(inv.id)}>
+                  Accept
+                </SettingsActionButton>
               </SettingsCard>
             ))}
           </div>

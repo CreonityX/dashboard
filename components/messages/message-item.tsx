@@ -1043,6 +1043,7 @@ export function MessageItem({
   onReply,
   onEdit,
   onDelete,
+  onViewThread,
   onReschedule,
   onResolveReview,
   reactions: initialReactions = [],
@@ -1053,6 +1054,7 @@ export function MessageItem({
   onReply?: (message: Message) => void;
   onEdit?: (message: Message, body: string) => void;
   onDelete?: (message: Message) => void;
+  onViewThread?: (message: Message) => void;
   onReschedule?: (message: Message, newDate: string, newTime: string) => void;
   onResolveReview?: (status: "approved" | "changes_requested") => void;
   reactions?: MessageReaction[];
@@ -1153,6 +1155,30 @@ export function MessageItem({
                 (newDate, newTime) => onReschedule?.(message, newDate, newTime),
                 onResolveReview,
               )
+            )}
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="mt-1 flex max-w-[340px] flex-col gap-1">
+                {message.attachments.map((a, i) => (
+                  <a
+                    key={`${message.id}-att-${i}`}
+                    href={a.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate rounded-lg bg-black/5 dark:bg-white/10 px-2.5 py-1.5 text-[12px] font-medium text-[#0a0a0a] dark:text-white hover:underline"
+                  >
+                    {a.filename}
+                  </a>
+                ))}
+              </div>
+            )}
+            {onViewThread && (message.replyCount ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => onViewThread(message)}
+                className="mt-1 text-[12px] font-semibold text-[#0ea5e9] hover:underline"
+              >
+                View thread ({message.replyCount})
+              </button>
             )}
           </div>
 

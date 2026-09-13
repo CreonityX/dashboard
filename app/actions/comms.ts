@@ -3,7 +3,9 @@
 import { cookies } from "next/headers";
 import {
   ApiCallError,
+  addMessageAttachment as apiAddMessageAttachment,
   archiveCommChannel as apiArchiveCommChannel,
+  browseCommChannels as apiBrowseCommChannels,
   createCommChannel as apiCreateCommChannel,
   deleteChannelMessage as apiDeleteChannelMessage,
   editChannelMessage as apiEditChannelMessage,
@@ -17,6 +19,7 @@ import {
   listCommChannels as apiListCommChannels,
   listDmMessages as apiListDmMessages,
   listDmThreads as apiListDmThreads,
+  listMessageAttachments as apiListMessageAttachments,
   markChannelRead as apiMarkChannelRead,
   markDmRead as apiMarkDmRead,
   sendChannelMessage as apiSendChannelMessage,
@@ -25,6 +28,7 @@ import {
   updateCommChannel as apiUpdateCommChannel,
   type CommChannel,
   type CommMessage,
+  type CommMessageAttachment,
   type DmThread,
   type UnreadCounts,
 } from "@/lib/api";
@@ -133,11 +137,17 @@ export async function leaveCommChannelAction(
   return authed((c) => apiLeaveCommChannel(channelId, c));
 }
 
+export async function browseCommChannelsAction(): Promise<
+  ActionResult<CommChannel[]>
+> {
+  return authed((c) => apiBrowseCommChannels(c));
+}
+
 export async function inviteToCommChannelAction(
   channelId: string,
-  userId: string,
+  payload: { userId?: string; email?: string },
 ): Promise<ActionResult<{ message: string }>> {
-  return authed((c) => apiInviteToCommChannel(channelId, userId, c));
+  return authed((c) => apiInviteToCommChannel(channelId, payload, c));
 }
 
 export async function archiveCommChannelAction(
@@ -163,6 +173,21 @@ export async function getThreadRepliesAction(
   messageId: string,
 ): Promise<ActionResult<CommMessage[]>> {
   return authed((c) => apiGetThreadReplies(messageId, c));
+}
+
+export async function listMessageAttachmentsAction(
+  messageId: string,
+): Promise<ActionResult<CommMessageAttachment[]>> {
+  return authed((c) => apiListMessageAttachments(messageId, c));
+}
+
+export async function addMessageAttachmentAction(
+  messageId: string,
+  file: File,
+): Promise<
+  ActionResult<{ attachmentId: string; storageKey: string; url: string }>
+> {
+  return authed((c) => apiAddMessageAttachment(messageId, file, c));
 }
 
 // ── DMs ───────────────────────────────────────────────────────────────────────
