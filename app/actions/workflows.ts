@@ -9,6 +9,7 @@ import {
   getWorkflowInstance as apiGet,
   listWorkflowInstances as apiList,
   listWorkflowTemplates as apiTemplates,
+  retryWorkflowInstance as apiRetry,
   startWorkflow as apiStart,
   type WorkflowInstance,
   type WorkflowInstanceStatus,
@@ -88,6 +89,12 @@ export async function cancelWorkflowInstanceAction(
   instanceId: string,
 ): Promise<ActionResult<{ message: string }>> {
   return authed((c) => apiCancel(instanceId, c));
+}
+
+export async function retryWorkflowInstanceAction(
+  instanceId: string,
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiRetry(instanceId, c));
 }
 
 export async function createWorkflowTemplateAction(payload: {

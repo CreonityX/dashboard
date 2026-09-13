@@ -6,10 +6,14 @@ import { Button, Switch } from "@heroui/react";
 import { TrashBin } from "@gravity-ui/icons";
 import { toast } from "sonner";
 import {
+  exportSettingsDataAction,
   getPrivacySettingsAction,
+  listUserBlocksAction,
+  unblockUserAction,
   updatePrivacySettingsAction,
 } from "@/app/actions/settings";
-import type { PrivacySettings } from "@/lib/api";
+import type { PrivacySettings, UserBlock } from "@/lib/api";
+import { useAccount } from "@/context/account-context";
 
 const VIS_TO_UI = {
   public: "public",
@@ -34,6 +38,7 @@ const MSG_TO_WIRE = {
 } as const;
 
 export function PrivacyView({ onBack }: { onBack?: () => void }) {
+  const { isBrand } = useAccount();
   const [msgPrivacyOpen, setMsgPrivacyOpen] = useState(false);
   const [msgPrivacyValue, setMsgPrivacyValue] = useState(
     "Verified Brands & Partners Only",
@@ -48,7 +53,7 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
   const [privacyLive, setPrivacyLive] = useState(false);
 
   useEffect(() => {
-    void getPrivacySettingsAction().then((r) => {
+    void getPrivacySettingsAction(isBrand).then((r) => {
       if (!r.success) return;
       setPrivacyLive(true);
       const w = r.data;
@@ -63,11 +68,15 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
       setReadReceipts(w.readReceipts);
       setTypingIndicators(w.typingIndicators);
     });
-  }, []);
+    void listUserBlocksAction(isBrand).then((r) => {
+      if (r.success) setBlockedUsers(r.data);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBrand]);
 
   function persist(patch: Partial<PrivacySettings>) {
     if (!privacyLive) return;
-    void updatePrivacySettingsAction(patch).then((r) => {
+    void updatePrivacySettingsAction(isBrand, patch).then((r) => {
       if (!r.success) toast.error(r.error);
     });
   }
@@ -84,26 +93,37 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
   }
 
   const [isManageBlockedOpen, setIsManageBlockedOpen] = useState(false);
-  const [blockedUsers, setBlockedUsers] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      handle: "@johndoe",
-      avatar: "https://i.pravatar.cc/150?u=1",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      handle: "@janesmith",
-      avatar: "https://i.pravatar.cc/150?u=2",
-    },
-    {
-      id: 3,
-      name: "Spam Bot",
-      handle: "@spambot99",
-      avatar: "https://i.pravatar.cc/150?u=3",
-    },
-  ]);
+  const [blockedUsers, setBlockedUsers] = useState<UserBlock[]>([]);
+
+  async function handleUnblock(user: UserBlock) {
+    const r = await unblockUserAction(isBrand, user.blockedUserId);
+    if (!r.success) {
+      toast.error(r.error);
+      return;
+    }
+    setBlockedUsers((prev) => prev.filter((u) => u.id !== user.id));
+    toast.success("User unblocked");
+  }
+
+  async function handleDownloadData() {
+    const r = await exportSettingsDataAction(isBrand);
+    if (!r.success) {
+      toast.error(r.error);
+      return;
+    }
+    const blob = new Blob([JSON.stringify(r.data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "creonity-data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Data download started", {
+      description: "Your archive is downloading now.",
+    });
+  }
 
   return (
     <div className="mx-auto max-w-5xl pt-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -494,29 +514,22 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
                       className="flex items-center justify-between p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="w-10 h-10 rounded-full bg-gray-200 dark:bg-[#27272a] object-cover"
-                        />
+                        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-[#27272a] flex items-center justify-center text-[13px] font-bold text-[#737373] dark:text-[#a1a1aa]">
+                          {user.blockedUserId.slice(0, 2).toUpperCase()}
+                        </div>
                         <div className="flex flex-col">
                           <span className="text-[14px] font-medium text-[#0a0a0a] dark:text-white">
-                            {user.name}
+                            Blocked user
                           </span>
                           <span className="text-[13px] text-[#737373] dark:text-[#a1a1aa]">
-                            {user.handle}
+                            {new Date(user.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
                       <Button
                         size="sm"
                         variant="flat"
-                        onClick={() => {
-                          setBlockedUsers(
-                            blockedUsers.filter((u) => u.id !== user.id),
-                          );
-                          toast.success(`Unblocked ${user.name}`);
-                        }}
+                        onClick={() => void handleUnblock(user)}
                         className="bg-gray-100 hover:bg-gray-200 dark:bg-[#27272a] dark:hover:bg-[#3f3f46] text-[#0a0a0a] dark:text-white font-medium rounded-lg h-8 px-3"
                       >
                         Unblock
@@ -558,11 +571,7 @@ export function PrivacyView({ onBack }: { onBack?: () => void }) {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
-                onClick={() =>
-                  toast.success("Data download started", {
-                    description: "Your archive will be ready soon.",
-                  })
-                }
+                onClick={() => void handleDownloadData()}
                 className="bg-[#f4f4f5] dark:bg-[#1f1f1f] border border-[#e4e4e7] dark:border-[#3f3f46] text-[#0a0a0a] dark:text-white font-medium rounded-xl h-10 px-5"
                 startContent={
                   <Icon icon="ph:download-simple" className="w-4 h-4" />

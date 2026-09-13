@@ -3,13 +3,20 @@
 import { cookies } from "next/headers";
 import {
   ApiCallError,
+  addWsAttachment as apiAddAttachment,
   addWsComment as apiAddComment,
   createWsProject as apiCreateProject,
   createWsTask as apiCreateTask,
+  deleteWsProject as apiDeleteProject,
+  deleteWsTask as apiDeleteTask,
+  listWsAttachments as apiListAttachments,
   listWsComments as apiListComments,
   listWsProjects as apiListProjects,
   listWsTasksByLane as apiListLanes,
   moveWsTaskLane as apiMoveLane,
+  updateWsProject as apiUpdateProject,
+  updateWsTask as apiUpdateTask,
+  type WsAttachment,
   type WsLanes,
   type WsLane,
   type WsComment,
@@ -91,4 +98,45 @@ export async function addWsCommentAction(
   body: string,
 ): Promise<ActionResult<WsComment>> {
   return authed((c) => apiAddComment(taskId, body, c));
+}
+
+export async function updateWsProjectAction(
+  projectId: string,
+  payload: { name?: string; description?: string },
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiUpdateProject(projectId, payload, c));
+}
+
+export async function deleteWsProjectAction(
+  projectId: string,
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiDeleteProject(projectId, c));
+}
+
+export async function updateWsTaskAction(
+  taskId: string,
+  payload: { title?: string; description?: string },
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiUpdateTask(taskId, payload, c));
+}
+
+export async function deleteWsTaskAction(
+  taskId: string,
+): Promise<ActionResult<{ message: string }>> {
+  return authed((c) => apiDeleteTask(taskId, c));
+}
+
+export async function listWsAttachmentsAction(
+  taskId: string,
+): Promise<ActionResult<WsAttachment[]>> {
+  return authed((c) => apiListAttachments(taskId, c));
+}
+
+export async function addWsAttachmentAction(
+  taskId: string,
+  file: File,
+): Promise<
+  ActionResult<{ attachmentId: string; storageKey: string; url: string }>
+> {
+  return authed((c) => apiAddAttachment(taskId, file, c));
 }

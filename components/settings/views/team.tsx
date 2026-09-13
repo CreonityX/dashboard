@@ -1,100 +1,234 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { toast } from "sonner"
-import { SettingsActionButton, SettingsBadge, SettingsCard, SettingsPage, SettingsSection, SettingsSelect, SettingsInput } from "../settings-ui"
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  SettingsActionButton,
+  SettingsBadge,
+  SettingsCard,
+  SettingsPage,
+  SettingsSection,
+  SettingsSelect,
+  SettingsInput,
+} from "../settings-ui";
 import {
   getBrandTeamAction,
   inviteBrandMemberAction,
   removeBrandMemberAction,
   updateBrandMemberRoleAction,
-} from "@/app/actions/brand"
-import type { TeamMember } from "@/lib/api"
+  getCreatorTeamAction,
+  inviteCreatorMemberAction,
+  removeCreatorMemberAction,
+  updateCreatorMemberRoleAction,
+} from "@/app/actions/brand";
+import { useAccount } from "@/context/account-context";
+import type { TeamMember } from "@/lib/api";
 
-const UI_ROLES = ["Owner", "Admin", "Campaign manager", "Viewer"] as const
-type UiRole = (typeof UI_ROLES)[number]
+const BRAND_ROLES = ["Owner", "Admin", "Campaign manager", "Viewer"] as const;
+const CREATOR_ROLES = ["Owner", "Manager", "Editor", "Viewer"] as const;
 
-// Backend roles ↔ UI labels. brand_owner has no UI assign path
-// (invite schema excludes it); it displays as Owner.
-const toBackendRole = (role: UiRole): string => {
+// Backend roles ↔ UI labels. *_owner has no UI assign path
+// (invite schemas exclude it); it displays as Owner.
+function toBackendRole(isBrand: boolean, role: string): string {
+  if (isBrand) {
+    switch (role) {
+      case "Owner":
+        return "brand_owner";
+      case "Admin":
+        return "brand_admin";
+      case "Campaign manager":
+        return "brand_manager";
+      default:
+        return "viewer";
+    }
+  }
   switch (role) {
     case "Owner":
-      return "brand_owner"
-    case "Admin":
-      return "brand_admin"
-    case "Campaign manager":
-      return "brand_manager"
-    case "Viewer":
-      return "viewer"
-  }
-}
-
-const toUiRole = (role: string): UiRole => {
-  switch (role) {
-    case "brand_owner":
-      return "Owner"
-    case "brand_admin":
-      return "Admin"
-    case "brand_manager":
-      return "Campaign manager"
+      return "creator_owner";
+    case "Manager":
+      return "creator_manager";
+    case "Editor":
+      return "creator_editor";
     default:
-      return "Viewer"
+      return "viewer";
   }
 }
 
-const displayName = (m: TeamMember) => m.email.split("@")[0] ?? m.email
+function toUiRole(isBrand: boolean, role: string): string {
+  if (isBrand) {
+    switch (role) {
+      case "brand_owner":
+        return "Owner";
+      case "brand_admin":
+        return "Admin";
+      case "brand_manager":
+        return "Campaign manager";
+      default:
+        return "Viewer";
+    }
+  }
+  switch (role) {
+    case "creator_owner":
+      return "Owner";
+    case "creator_manager":
+      return "Manager";
+    case "creator_editor":
+      return "Editor";
+    default:
+      return "Viewer";
+  }
+}
+
+const ownerRole = (isBrand: boolean) =>
+  isBrand ? "brand_owner" : "creator_owner";
+const defaultInviteRole = (isBrand: boolean) =>
+  isBrand ? "Campaign manager" : "Editor";
+
+const displayName = (m: TeamMember) => m.email.split("@")[0] ?? m.email;
 
 export function TeamView({ onBack }: { onBack?: () => void }) {
-  const [members, setMembers] = useState<TeamMember[]>([])
-  const [email, setEmail] = useState("")
-  const [role, setRole] = useState<UiRole>("Campaign manager")
-  const [loading, setLoading] = useState(true)
+  const { isBrand } = useAccount();
+  const UI_ROLES = isBrand ? BRAND_ROLES : CREATOR_ROLES;
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<string>(defaultInviteRole(isBrand));
+  const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const res = await getBrandTeamAction()
-    if (res.success) setMembers(res.data.members)
-    else toast.error(res.error)
-    setLoading(false)
-  }
+    const res = isBrand
+      ? await getBrandTeamAction()
+      : await getCreatorTeamAction();
+    if (res.success) setMembers(res.data.members);
+    else toast.error(res.error);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    void load()
-  }, [])
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBrand]);
 
   const invite = async () => {
-    if (!email.includes("@")) return toast.error("Enter a valid email address")
-    const res = await inviteBrandMemberAction({ email, role: toBackendRole(role) })
-    if (!res.success) return toast.error(res.error)
-    setEmail("")
-    toast.success("Invitation sent", { description: "They'll appear below once accepted." })
-    await load()
-  }
+    if (!email.includes("@")) return toast.error("Enter a valid email address");
+    const backendRole = toBackendRole(isBrand, role);
+    const res = isBrand
+      ? await inviteBrandMemberAction({ email, role: backendRole })
+      : await inviteCreatorMemberAction({ email, role: backendRole });
+    if (!res.success) return toast.error(res.error);
+    setEmail("");
+    toast.success("Invitation sent", {
+      description: "They'll appear below once accepted.",
+    });
+    await load();
+  };
 
-  const changeRole = async (id: string, next: UiRole) => {
-    const res = await updateBrandMemberRoleAction(id, toBackendRole(next))
-    if (!res.success) return toast.error(res.error)
-    await load()
-  }
+  const changeRole = async (id: string, next: string) => {
+    const backendRole = toBackendRole(isBrand, next);
+    const res = isBrand
+      ? await updateBrandMemberRoleAction(id, backendRole)
+      : await updateCreatorMemberRoleAction(id, backendRole);
+    if (!res.success) return toast.error(res.error);
+    await load();
+  };
 
   const remove = async (id: string) => {
-    const res = await removeBrandMemberAction(id)
-    if (!res.success) return toast.error(res.error)
-    await load()
-  }
+    const res = isBrand
+      ? await removeBrandMemberAction(id)
+      : await removeCreatorMemberAction(id);
+    if (!res.success) return toast.error(res.error);
+    await load();
+  };
 
-  if (loading) return null
-  const pending = members.filter((m) => m.status === "invited")
+  if (loading) return null;
+  const pending = members.filter((m) => m.status === "invited");
+  const noun = isBrand ? "brand" : "creator team";
 
-  return <SettingsPage title="Team" description="Invite people and control who can manage your brand." onBack={onBack}>
-    <SettingsSection title="Invite a teammate"><SettingsCard className="flex flex-col gap-3 sm:flex-row">
-      <SettingsInput value={email} onChange={(event) => setEmail(event.target.value)} placeholder="teammate@company.com" className="flex-1" />
-      <SettingsSelect value={role} onChange={(val) => setRole(val as UiRole)} options={[...UI_ROLES]} className="sm:w-48" />
-      <SettingsActionButton onClick={invite}>Invite</SettingsActionButton>
-    </SettingsCard></SettingsSection>
-    <SettingsSection title={`People (${members.length})`}><div className="flex flex-col gap-3">{members.map((member) => <SettingsCard key={member.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4">
-      <div className="flex items-center gap-3"><div className="size-10 rounded-full bg-[#f4f4f5] dark:bg-[#27272a] flex items-center justify-center text-[13px] font-bold text-[#737373]">{displayName(member).slice(0, 2).toUpperCase()}</div><div><p className="font-semibold text-[#0a0a0a] dark:text-white leading-tight">{displayName(member)}</p><p className="text-[13px] text-[#71717a] mt-0.5">{member.email}{member.status !== "active" ? ` · ${member.status}` : ""}</p></div></div>
-      <div className="flex items-center gap-2 w-full sm:w-auto"><SettingsSelect value={toUiRole(member.role)} onChange={(val) => changeRole(member.id, val as UiRole)} options={[...UI_ROLES]} className="flex-1 sm:flex-none sm:w-48" />{member.role !== "brand_owner" && <SettingsActionButton variant="dangerSoft" onClick={() => remove(member.id)}>Remove</SettingsActionButton>}</div>
-    </SettingsCard>)}</div></SettingsSection>
-    {pending.length > 0 && <SettingsSection title="Pending invitations"><div className="flex flex-col gap-3">{pending.map((invite) => <SettingsCard key={invite.id} className="flex items-center justify-between"><div><p className="font-semibold text-[#0a0a0a] dark:text-white">{invite.email}</p><p className="text-sm text-[#71717a]">{toUiRole(invite.role)}</p></div><SettingsBadge tone="warning">Pending</SettingsBadge></SettingsCard>)}</div></SettingsSection>}
-  </SettingsPage>
+  return (
+    <SettingsPage
+      title="Team"
+      description={`Invite people and control who can manage your ${noun}.`}
+      onBack={onBack}
+    >
+      <SettingsSection title="Invite a teammate">
+        <SettingsCard className="flex flex-col gap-3 sm:flex-row">
+          <SettingsInput
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="teammate@company.com"
+            className="flex-1"
+          />
+          <SettingsSelect
+            value={role}
+            onChange={(val) => setRole(val as string)}
+            options={[...UI_ROLES]}
+            className="sm:w-48"
+          />
+          <SettingsActionButton onClick={invite}>Invite</SettingsActionButton>
+        </SettingsCard>
+      </SettingsSection>
+      <SettingsSection title={`People (${members.length})`}>
+        <div className="flex flex-col gap-3">
+          {members.map((member) => (
+            <SettingsCard
+              key={member.id}
+              className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-[#f4f4f5] dark:bg-[#27272a] flex items-center justify-center text-[13px] font-bold text-[#737373]">
+                  {displayName(member).slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-[#0a0a0a] dark:text-white leading-tight">
+                    {displayName(member)}
+                  </p>
+                  <p className="text-[13px] text-[#71717a] mt-0.5">
+                    {member.email}
+                    {member.status !== "active" ? ` · ${member.status}` : ""}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <SettingsSelect
+                  value={toUiRole(isBrand, member.role)}
+                  onChange={(val) => changeRole(member.id, val as string)}
+                  options={[...UI_ROLES]}
+                  className="flex-1 sm:flex-none sm:w-48"
+                />
+                {member.role !== ownerRole(isBrand) && (
+                  <SettingsActionButton
+                    variant="dangerSoft"
+                    onClick={() => remove(member.id)}
+                  >
+                    Remove
+                  </SettingsActionButton>
+                )}
+              </div>
+            </SettingsCard>
+          ))}
+        </div>
+      </SettingsSection>
+      {pending.length > 0 && (
+        <SettingsSection title="Pending invitations">
+          <div className="flex flex-col gap-3">
+            {pending.map((invite) => (
+              <SettingsCard
+                key={invite.id}
+                className="flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-[#0a0a0a] dark:text-white">
+                    {invite.email}
+                  </p>
+                  <p className="text-sm text-[#71717a]">
+                    {toUiRole(isBrand, invite.role)}
+                  </p>
+                </div>
+                <SettingsBadge tone="warning">Pending</SettingsBadge>
+              </SettingsCard>
+            ))}
+          </div>
+        </SettingsSection>
+      )}
+    </SettingsPage>
+  );
 }

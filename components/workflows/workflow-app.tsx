@@ -9,6 +9,7 @@ import {
   cancelWorkflowInstanceAction,
   getWorkflowInstanceAction,
   listWorkflowInstancesAction,
+  retryWorkflowInstanceAction,
   startWorkflowAction,
 } from "@/app/actions/workflows";
 import type {
@@ -136,6 +137,20 @@ export function WorkflowApp({ initialTemplates, initialError }: Props) {
     if (!selectedInstance) return;
     startTransition(async () => {
       const r = await cancelWorkflowInstanceAction(selectedInstance.id);
+      if (!r.success) {
+        setError(r.error);
+        return;
+      }
+      const detail = await getWorkflowInstanceAction(selectedInstance.id);
+      if (detail.success) setSelectedInstance(detail.data);
+      await loadInstances(statusFilter);
+    });
+  }
+
+  function onRetry() {
+    if (!selectedInstance) return;
+    startTransition(async () => {
+      const r = await retryWorkflowInstanceAction(selectedInstance.id);
       if (!r.success) {
         setError(r.error);
         return;
@@ -361,6 +376,7 @@ export function WorkflowApp({ initialTemplates, initialError }: Props) {
                     templates={templates}
                     onApprove={onApprove}
                     onCancel={onCancel}
+                    onRetry={onRetry}
                     disabled={pending}
                   />
                 ) : null}
@@ -417,12 +433,14 @@ function InstanceDetail({
   templates,
   onApprove,
   onCancel,
+  onRetry,
   disabled,
 }: {
   instance: WorkflowInstanceWithSteps;
   templates: WorkflowTemplate[];
   onApprove: (stepIndex: number, approved: boolean) => void;
   onCancel: () => void;
+  onRetry: () => void;
   disabled: boolean;
 }) {
   const tpl = templates.find((t) => t.id === instance.templateId);
@@ -454,6 +472,17 @@ function InstanceDetail({
           >
             <Ban className="h-3.5 w-3.5" />
             Cancel
+          </Button>
+        ) : instance.status === "failed" ? (
+          <Button
+            size="sm"
+            variant="primary"
+            isDisabled={disabled}
+            onPress={onRetry}
+            className="ml-auto"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry
           </Button>
         ) : null}
       </div>

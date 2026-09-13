@@ -361,7 +361,7 @@ export async function reorderPortfolioItems(
   });
 }
 
-// ── Privacy settings (creator) ──────────────────────────────────────────────
+// ── Privacy settings (creator + brand share the shape) ──────────────────────
 
 export type PrivacySettings = {
   visibility: "public" | "members" | "private";
@@ -374,21 +374,63 @@ export type PrivacySettings = {
   typingIndicators: boolean;
 };
 
+function settingsBase(isBrand: boolean): string {
+  return isBrand ? "/brand/settings" : "/creator/settings";
+}
+
 export async function getPrivacySettings(
+  isBrand: boolean,
   forwardCookies: string,
 ): Promise<PrivacySettings> {
-  return apiFetch<PrivacySettings>("/creator/settings/privacy", {
+  return apiFetch<PrivacySettings>(`${settingsBase(isBrand)}/privacy`, {
     forwardCookies,
   });
 }
 
 export async function updatePrivacySettings(
+  isBrand: boolean,
   payload: Partial<PrivacySettings>,
   forwardCookies: string,
 ): Promise<PrivacySettings> {
-  return apiFetch<PrivacySettings>("/creator/settings/privacy", {
+  return apiFetch<PrivacySettings>(`${settingsBase(isBrand)}/privacy`, {
     method: "PATCH",
     body: payload,
+    forwardCookies,
+  });
+}
+
+export type UserBlock = {
+  id: string;
+  blockerUserId: string;
+  blockedUserId: string;
+  createdAt: string;
+};
+
+export async function listUserBlocks(
+  isBrand: boolean,
+  forwardCookies: string,
+): Promise<UserBlock[]> {
+  return apiFetch<UserBlock[]>(`${settingsBase(isBrand)}/blocks`, {
+    forwardCookies,
+  });
+}
+
+export async function unblockUser(
+  isBrand: boolean,
+  blockedUserId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `${settingsBase(isBrand)}/blocks/${blockedUserId}`,
+    { method: "DELETE", forwardCookies },
+  );
+}
+
+export async function exportSettingsData(
+  isBrand: boolean,
+  forwardCookies: string,
+): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>(`${settingsBase(isBrand)}/export`, {
     forwardCookies,
   });
 }
@@ -738,6 +780,43 @@ export async function inviteCreatorMember(
     {
       method: "POST",
       body: payload,
+      forwardCookies,
+    },
+  );
+}
+
+export async function updateCreatorMemberRole(
+  memberId: string,
+  role: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/team-members/${memberId}`, {
+    method: "PATCH",
+    body: { role },
+    forwardCookies,
+  });
+}
+
+export async function removeCreatorMember(
+  memberId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/team-members/${memberId}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
+
+export async function acceptCreatorTeamInvite(
+  memberId: string,
+  token: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/team-members/${memberId}/accept`,
+    {
+      method: "POST",
+      body: { token },
       forwardCookies,
     },
   );
@@ -1834,6 +1913,19 @@ export async function cancelWorkflowInstance(
   );
 }
 
+export async function retryWorkflowInstance(
+  id: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/workflows/instances/${id}/retry`,
+    {
+      method: "POST",
+      forwardCookies,
+    },
+  );
+}
+
 // ── Notifications ────────────────────────────────────────────────────────────
 
 export type NotificationKind =
@@ -2385,4 +2477,79 @@ export async function addWsComment(
     body: { body },
     forwardCookies,
   });
+}
+
+export async function updateWsProject(
+  projectId: string,
+  payload: { name?: string; description?: string },
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/workspace/projects/${projectId}`,
+    { method: "PATCH", body: payload, forwardCookies },
+  );
+}
+
+export async function deleteWsProject(
+  projectId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/creator/workspace/projects/${projectId}`,
+    { method: "DELETE", forwardCookies },
+  );
+}
+
+export async function updateWsTask(
+  taskId: string,
+  payload: { title?: string; description?: string },
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/workspace/tasks/${taskId}`, {
+    method: "PATCH",
+    body: payload,
+    forwardCookies,
+  });
+}
+
+export async function deleteWsTask(
+  taskId: string,
+  forwardCookies: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/creator/workspace/tasks/${taskId}`, {
+    method: "DELETE",
+    forwardCookies,
+  });
+}
+
+export type WsAttachment = {
+  id: string;
+  filename: string;
+  storageKey: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+};
+
+export async function listWsAttachments(
+  taskId: string,
+  forwardCookies: string,
+): Promise<WsAttachment[]> {
+  return apiFetch<WsAttachment[]>(
+    `/creator/workspace/tasks/${taskId}/attachments`,
+    { forwardCookies },
+  );
+}
+
+export async function addWsAttachment(
+  taskId: string,
+  file: File,
+  forwardCookies: string,
+): Promise<{ attachmentId: string; storageKey: string; url: string }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  return apiFetch<{ attachmentId: string; storageKey: string; url: string }>(
+    `/creator/workspace/tasks/${taskId}/attachments`,
+    { method: "POST", body: fd, forwardCookies },
+  );
 }

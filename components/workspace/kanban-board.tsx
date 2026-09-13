@@ -13,15 +13,29 @@ import {
 } from "@dnd-kit/core";
 import { Typography } from "@heroui/react";
 import {
+  addWsAttachmentAction,
   addWsCommentAction,
   createWsProjectAction,
   createWsTaskAction,
+  deleteWsProjectAction,
+  deleteWsTaskAction,
+  listWsAttachmentsAction,
   listWsCommentsAction,
   listWsLanesAction,
   listWsProjectsAction,
   moveWsTaskLaneAction,
+  updateWsProjectAction,
+  updateWsTaskAction,
 } from "@/app/actions/workspace";
-import type { WsComment, WsLane, WsLanes, WsProject, WsTask } from "@/lib/api";
+import type {
+  WsAttachment,
+  WsComment,
+  WsLane,
+  WsLanes,
+  WsProject,
+  WsTask,
+} from "@/lib/api";
+import { toast } from "sonner";
 
 const LANES: { id: WsLane; label: string }[] = [
   { id: "todo", label: "To Do" },
@@ -123,6 +137,9 @@ export function KanbanBoard() {
   const [openTask, setOpenTask] = useState<WsTask | null>(null);
   const [comments, setComments] = useState<WsComment[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
+  const [taskTitleDraft, setTaskTitleDraft] = useState("");
+  const [attachments, setAttachments] = useState<WsAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -146,8 +163,12 @@ export function KanbanBoard() {
 
   useEffect(() => {
     if (!openTask) return;
+    setTaskTitleDraft(openTask.title);
     void listWsCommentsAction(openTask.id).then((r) => {
       if (r.success) setComments(r.data);
+    });
+    void listWsAttachmentsAction(openTask.id).then((r) => {
+      if (r.success) setAttachments(r.data);
     });
   }, [openTask]);
 
@@ -211,6 +232,93 @@ export function KanbanBoard() {
     }
   }
 
+  async function handleRenameTask() {
+    const title = taskTitleDraft.trim();
+    if (!title || !openTask || title === openTask.title) return;
+    const prev = lanes;
+    setLanes((cur) => {
+      const next = { ...cur };
+      for (const l of Object.keys(next) as WsLane[]) {
+        next[l] = next[l].map((t) =>
+          t.id === openTask.id ? { ...t, title } : t,
+        );
+      }
+      return next;
+    });
+    setOpenTask((t) => (t ? { ...t, title } : t));
+    const r = await updateWsTaskAction(openTask.id, { title });
+    if (!r.success) {
+      setLanes(prev);
+      toast.error(r.error);
+    }
+  }
+
+  async function handleDeleteTask() {
+    if (!openTask) return;
+    const id = openTask.id;
+    const prev = lanes;
+    setLanes((cur) => {
+      const next = { ...cur };
+      for (const l of Object.keys(next) as WsLane[]) {
+        next[l] = next[l].filter((t) => t.id !== id);
+      }
+      return next;
+    });
+    setOpenTask(null);
+    const r = await deleteWsTaskAction(id);
+    if (!r.success) {
+      setLanes(prev);
+      toast.error(r.error);
+    } else {
+      toast.success("Task deleted");
+    }
+  }
+
+  async function handleRenameProject() {
+    const name = newProject.trim();
+    if (!name || !projectId) return;
+    const r = await updateWsProjectAction(projectId, { name });
+    if (r.success) {
+      setProjects((p) =>
+        p.map((x) => (x.id === projectId ? { ...x, name } : x)),
+      );
+      setNewProject("");
+    } else {
+      toast.error(r.error);
+    }
+  }
+
+  async function handleDeleteProject() {
+    if (!projectId) return;
+    const prev = projects;
+    const prevId = projectId;
+    setProjects((p) => p.filter((x) => x.id !== prevId));
+    setProjectId("");
+    setLanes(EMPTY_LANES);
+    const r = await deleteWsProjectAction(prevId);
+    if (!r.success) {
+      setProjects(prev);
+      setProjectId(prevId);
+      toast.error(r.error);
+    } else {
+      toast.success("Project archived");
+    }
+  }
+
+  async function handleAttachFile(file: File) {
+    if (!openTask || uploading) return;
+    setUploading(true);
+    const r = await addWsAttachmentAction(openTask.id, file);
+    setUploading(false);
+    if (!r.success) {
+      toast.error(r.error);
+      return;
+    }
+    const listed = await listWsAttachmentsAction(openTask.id);
+    if (listed.success) setAttachments(listed.data);
+    else toast.success("File attached");
+  }
+
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-hidden">
       <div className="flex flex-wrap items-center gap-2">
@@ -238,6 +346,18 @@ export function KanbanBoard() {
           className="rounded-xl bg-[#0a0a0a] dark:bg-white px-3 py-2 text-[14px] font-semibold text-white dark:text-[#0a0a0a]"
         >
           Add project
+        </button>
+        <button
+          onClick={() => void handleRenameProject()}
+          className="rounded-xl border border-[#e4e4e7] dark:border-[#27272a] px-3 py-2 text-[14px] font-semibold text-[#0a0a0a] dark:text-white"
+        >
+          Rename
+        </button>
+        <button
+          onClick={() => void handleDeleteProject()}
+          className="rounded-xl border border-[#e4e4e7] dark:border-[#27272a] px-3 py-2 text-[14px] font-semibold text-[#ef4444]"
+        >
+          Delete
         </button>
         <div className="flex flex-1 items-center gap-2 lg:justify-end">
           <input
@@ -283,15 +403,29 @@ export function KanbanBoard() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
           <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-t-2xl sm:rounded-2xl border border-[#e4e4e7] dark:border-[#27272a] bg-white dark:bg-[#131316] p-5">
             <div className="mb-1 flex items-start justify-between gap-3">
-              <p className="text-[16px] font-bold text-[#0a0a0a] dark:text-white">
-                {openTask.title}
-              </p>
-              <button
-                onClick={() => setOpenTask(null)}
-                className="text-[13px] font-semibold text-[#737373] dark:text-[#a1a1aa] hover:underline"
-              >
-                Close
-              </button>
+              <input
+                value={taskTitleDraft}
+                onChange={(e) => setTaskTitleDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleRenameTask();
+                }}
+                onBlur={() => void handleRenameTask()}
+                className="flex-1 min-w-0 bg-transparent text-[16px] font-bold text-[#0a0a0a] dark:text-white outline-none border-b border-transparent focus:border-[#e4e4e7] dark:focus:border-[#27272a]"
+              />
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  onClick={() => void handleDeleteTask()}
+                  className="text-[13px] font-semibold text-[#ef4444] hover:underline"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setOpenTask(null)}
+                  className="text-[13px] font-semibold text-[#737373] dark:text-[#a1a1aa] hover:underline"
+                >
+                  Close
+                </button>
+              </div>
             </div>
             <div className="mb-4 flex max-h-64 flex-col gap-2 overflow-y-auto">
               {comments.map((c) => (
@@ -307,6 +441,32 @@ export function KanbanBoard() {
                   No comments yet.
                 </p>
               )}
+            </div>
+            <div className="mb-4 flex flex-col gap-2">
+              {attachments.map((a) => (
+                <a
+                  key={a.id}
+                  href={a.storageKey}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="truncate rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2 text-[13px] font-medium text-[#0ea5e9] hover:underline"
+                >
+                  {a.filename}
+                </a>
+              ))}
+              <label className="cursor-pointer rounded-xl border border-dashed border-[#e4e4e7] dark:border-[#27272a] px-3 py-2 text-center text-[13px] font-semibold text-[#737373] dark:text-[#a1a1aa] hover:text-[#0a0a0a] dark:hover:text-white">
+                {uploading ? "Uploading…" : "Attach a file"}
+                <input
+                  type="file"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) void handleAttachFile(f);
+                  }}
+                />
+              </label>
             </div>
             <div className="flex gap-2">
               <input
